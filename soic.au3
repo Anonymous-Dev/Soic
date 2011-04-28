@@ -1,10 +1,9 @@
 #region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_icon=SOIC.ico
-#AutoIt3Wrapper_UseUpx=n
 #AutoIt3Wrapper_UseX64=n
 #AutoIt3Wrapper_Res_Comment=DownloadLink = https://github.com/Anonymous-Dev/Soic
 #AutoIt3Wrapper_Res_Description=Network stress test tool
-#AutoIt3Wrapper_Res_Fileversion=1.0.0.2
+#AutoIt3Wrapper_Res_Fileversion=1.0.0.3
 #AutoIt3Wrapper_Res_Fileversion_AutoIncrement=p
 #AutoIt3Wrapper_Res_LegalCopyright=© Anonymous Author Vlad
 #AutoIt3Wrapper_AU3Check_Stop_OnWarning=y
@@ -12,18 +11,17 @@
 #endregion ;**** Directives created by AutoIt3Wrapper_GUI ****
 $oMyError = ObjEvent("AutoIt.Error", "IgnoreErr") ; Ignore errors and resume script
 ;$oMyError = ObjEvent("AutoIt.Error", "MyErrFunc") ; Initialize a COM error handler
-If $CmdLine[0] = 1 Then
+If $CmdLine[0] = 3 Then
 	Opt("TrayIconHide", 1)
-	Local $athread[16], $2xx, $3xx, $4xx, $5xx, $Dropped, $oHTTP
+	Local $athread[16], $2xx, $3xx, $4xx, $5xx, $Dropped, $TotKB, $oHTTP
 	For $column = 0 To 15
 		$athread[$column] = RegRead("HKCU\Software\soic", $CmdLine[1] & $column)
 		If @error Then Exit
 	Next
 	; split headers to name/value pairs and place to array
 	$aNameValue = StringSplit($athread[3], @CRLF, 1)
-	$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
 	While 1
-		$timeinit = TimerInit()
+		$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
 		With $oHTTP
 			.SetProxy($athread[15], $athread[5], "") ; Use proxy_server for all domains. BypassList = ""
 			.SetTimeouts($athread[10], $athread[11], $athread[12], $athread[13])
@@ -55,6 +53,11 @@ If $CmdLine[0] = 1 Then
 				Case Else
 					$Dropped += 1
 			EndSwitch
+			If $CmdLine[3] = 1 Then
+				RegWrite("HKCU\Software\soic", "Response", "REG_MULTI_SZ", .Responsetext)
+			EndIf
+			$TotKB += BinaryLen(StringToBinary(.Responsetext)) / 1024
+			RegWrite("HKCU\Software\soic", $CmdLine[1] & "Status" & $CmdLine[2], "REG_MULTI_SZ", $2xx & "|" & $3xx & "|" & $4xx & "|" & $5xx & "|" & $Dropped & "|" & $TotKB)
 		EndWith
 	WEnd
 Else
@@ -164,15 +167,16 @@ Else
 	; ===============================================================================================================================
 	Global Const $tagLVITEM = "uint Mask;int Item;int SubItem;uint State;uint StateMask;ptr Text;int TextMax;int Image;lparam Param;" & _
 			"int Indent;int GroupID;uint Columns;ptr pColumns"
-	$Gui = GUICreate("Strategic Orbit Ion Cannon 1.0 Beta", 970, 460, 200, 125)
+	$Gui = GUICreate("Strategic Orbit Ion Cannon 1.0.0.3 Beta", 970, 460, 200, 125)
 	GUISetOnEvent(-3, "GuiClose") ; $GUI_EVENT_CLOSE = -3
 	$__LISTVIEWCTRL = GUICtrlCreateListView("TargetUrlIp|Method|PostData|HttpHeaders|Threads|ProxyIp:port|ProxyUserName|ProxyPassword|ServerUserName|" & _
 			"ServerPassword|ResolveTimeout, ms|ConnectTimeout|SendTimeout|ReceiveTimeout|WaitForResponse, sec", 0, 64, 970, 150, 0x0008) ; $LVS_SHOWSELALWAYS = 0x0008
 	GUICtrlSendMsg($__LISTVIEWCTRL, 0x1000 + 54, 0x00000001, 0x00000001) ; $LVM_SETEXTENDEDLISTVIEWSTYLE = ($LVM_FIRST + 54) $LVS_EX_GRIDLINES = 0x00000001
 	GUICtrlSendMsg($__LISTVIEWCTRL, 0x1000 + 54, 0x00000004, 0x00000004) ; $LVM_SETEXTENDEDLISTVIEWSTYLE = ($LVM_FIRST + 54) $LVS_EX_CHECKBOXES = 0x00000004
 	$Edit = GUICtrlCreateEdit("", 0, 215, 970, 223)
-	$CheckBox = GUICtrlCreateCheckbox("Show Response", 700, 10)
+	$CBresp = GUICtrlCreateCheckbox("Show Response", 700, 10)
 	$CBreg = GUICtrlCreateCheckbox("Clear registry", 700, 30)
+	GUICtrlSetState(-1, 1)
 	$nColumnCount = _GUICtrlListView_GetColumnCount($__LISTVIEWCTRL)
 	;array dim to number of cols, value of each element determines control.
 	;0= ignore, 1= input, 2= combo, 4= calendar, 8 = list, 16 =combo1 , 32=updown , 64=edit , 256 use callback.
@@ -235,7 +239,7 @@ Else
 	GUISetState(@SW_SHOW, $Gui)
 
 	While 1
-		Sleep(100)
+		Sleep(10)
 		_MonitorEditState($editCtrl, $editFlag, $__LISTVIEWCTRL, $LVINFO)
 		If GUICtrlRead($Button1) = 1 Then ;  1 = $GUI_CHECKED
 			$CheckedCount = _LvGetCheckedCount($__LISTVIEWCTRL)
@@ -246,13 +250,15 @@ Else
 	WEnd
 EndIf
 
+
 _TermEditLib()
 Exit
 
 
+
 Func Button1Click()
 	$nItemCount = _GUICtrlListView_GetItemCount($__LISTVIEWCTRL)
-	Local $aListView[1][$nColumnCount], $2xx, $3xx, $4xx, $5xx, $Dropped, $nCheckedItem = 0, $aHeaders[$CheckedCount][2], $oHTTP[$CheckedCount]
+	Local $aListView[1][$nColumnCount], $2xx, $3xx, $4xx, $5xx, $Dropped, $nCheckedItem = 0, $aHeaders[$CheckedCount][2], $oHTTP[$CheckedCount], $TotKB0 = 0, $Hits0 = 0
 	For $item = 0 To $nItemCount - 1
 		If _GUICtrlListView_GetItemChecked($__LISTVIEWCTRL, $item) Then
 			$nCheckedItem += 1
@@ -302,63 +308,97 @@ Func Button1Click()
 			$UBpid = UBound($Pid)
 			ReDim $Pid[$UBpid + $aListView[$nCheckedItem - 1][4]]
 			For $thread = 0 To $aListView[$nCheckedItem - 1][4] - 1
-				$Pid[$UBpid + $thread] = Run(@ScriptName & " " & $item)
+				$Pid[$UBpid + $thread] = Run(@ScriptName & " " & $item & " " & $thread & " " & GUICtrlRead($CBresp), @SystemDir, @SW_HIDE, 0x1)
 			Next
 		EndIf
 	Next
 
 	While 1
-		$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
+		$T0 = TimerInit()
+		Sleep(1000)
+		_MonitorEditState($editCtrl, $editFlag, $__LISTVIEWCTRL, $LVINFO)
+		If GUICtrlRead($Button1) <> 1 Then
+			For $i = 1 To UBound($Pid) - 1
+				ProcessClose($Pid[$i])
+			Next
+			ExitLoop
+		EndIf
+		If GUICtrlRead($CBresp) = 1 Then
+			$HtmlSource = RegRead("HKCU\Software\soic", "Response")
+			If $HtmlSource <> "" Then GUICtrlSetData($Edit, $HtmlSource)
+		EndIf
+		Local $2xx = 0, $3xx = 0, $4xx = 0, $5xx = 0, $Dropped = 0, $TotKB1 = 0
 		For $item = 0 To $nCheckedItem - 1
-			$timeinit = TimerInit()
-			If GUICtrlRead($Button1) <> 1 Then ExitLoop 2 ; 1 = $GUI_CHECKED lazor button pressed.
-			With $oHTTP
-				.SetProxy($aListView[$item][$nColumnCount], $aListView[$item][5], "") ; Use proxy_server for all domains. BypassList = ""
-				.SetTimeouts($aListView[$item][10], $aListView[$item][11], $aListView[$item][12], $aListView[$item][13])
-				;.SetClientCertificate("LOCAL_MACHINE\Personal\My Certificate")
-				.Open($aListView[$item][1], $aListView[$item][0], True)
-				;.SetAutoLogonPolicy(2) ; Always = 0, default OnlyIfBypassProxy = 1, Never = 2
-				.SetCredentials($aListView[$item][6], $aListView[$item][7], 1) ; set credentials for proxy
-				.SetCredentials($aListView[$item][8], $aListView[$item][9], 0) ; set credentials for server
-				For $header = 0 To UBound($aHeaders, 2) - 2 Step 2
-					If $aHeaders[$item][$header] = "" Or $aHeaders[$item][$header + 1] = "" Then ExitLoop
-					.SetRequestHeader($aHeaders[$item][$header], $aHeaders[$item][$header + 1])
-				Next
-				.Send($lvEditText[$item][0])
-				;.Abort
-				.WaitForResponse($aListView[$item][14])
-				If GUICtrlRead($CheckBox) = 1 Then
-					$HtmlSource = .Responsetext
-					If $HtmlSource <> "" Then GUICtrlSetData($Edit, $HtmlSource)
-				EndIf
-
-				;_ArrayDisplay($aListView)
-				;$timeinit = TimerInit()
-				;MsgBox(0, "Time Difference", $Pid)
-
-				Switch .Status
-					Case 200 To 299
-						$2xx += 1
-					Case 300 To 399
-						$3xx += 1
-					Case 400 To 499
-						$4xx += 1
-					Case 500 To 599
-						$5xx += 1
-					Case Else
-						$Dropped += 1
-				EndSwitch
-				$statMsg1 = StringFormat("2xx: %u 3xx: %u 4xx: %u 5xx: %u Dropped: %u Hits/sec: %.1f KB/sec: %.1f", $2xx & @TAB, $3xx & @TAB, $4xx & @TAB, $5xx & @TAB, $Dropped & @TAB, 1000 / TimerDiff($timeinit) & @TAB, BinaryLen(StringToBinary(.Responsetext)) / 1024)
-				_GUICtrlStatusBar_SetText($StatusBar1, $statMsg1, 0)
-			EndWith
+			For $thread = 0 To $aListView[$nCheckedItem - 1][4] - 1
+				$aStatus = StringSplit(RegRead("HKCU\Software\soic", $item & "Status" & $thread), "|")
+				If @error Then ExitLoop 1
+				$2xx += $aStatus[1]
+				$3xx += $aStatus[2]
+				$4xx += $aStatus[3]
+				$5xx += $aStatus[4]
+				$Dropped += $aStatus[5]
+				$TotKB1 += $aStatus[6]
+			Next
 		Next
+		$Hits1 = $2xx + $3xx + $4xx + $5xx
+		$statMsg1 = StringFormat("2xx: %u 3xx: %u 4xx: %u 5xx: %u Dropped: %u Received,KB: %u KB/sec: %.1f Hit/sec: %.1f", $2xx & @TAB, $3xx & @TAB, $4xx & @TAB, $5xx & @TAB, $Dropped & @TAB, $TotKB1 & @TAB, 1000 * ($TotKB1 - $TotKB0) / TimerDiff($T0) & @TAB, 1000 * ($Hits1 - $Hits0) / TimerDiff($T0))
+		_GUICtrlStatusBar_SetText($StatusBar1, $statMsg1, 0)
+		$TotKB0 = $TotKB1
+		$Hits0 = $Hits1
 	WEnd
 
+	#CS 	While 1
+		$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
+		For $item = 0 To $nCheckedItem - 1
+		$timeinit = TimerInit()
+		If GUICtrlRead($Button1) <> 1 Then ExitLoop 2 ; 1 = $GUI_CHECKED lazor button pressed.
+		With $oHTTP
+		.SetProxy($aListView[$item][$nColumnCount], $aListView[$item][5], "") ; Use proxy_server for all domains. BypassList = ""
+		.SetTimeouts($aListView[$item][10], $aListView[$item][11], $aListView[$item][12], $aListView[$item][13])
+		;.SetClientCertificate("LOCAL_MACHINE\Personal\My Certificate")
+		.Open($aListView[$item][1], $aListView[$item][0], True)
+		;.SetAutoLogonPolicy(2) ; Always = 0, default OnlyIfBypassProxy = 1, Never = 2
+		.SetCredentials($aListView[$item][6], $aListView[$item][7], 1) ; set credentials for proxy
+		.SetCredentials($aListView[$item][8], $aListView[$item][9], 0) ; set credentials for server
+		For $header = 0 To UBound($aHeaders, 2) - 2 Step 2
+		If $aHeaders[$item][$header] = "" Or $aHeaders[$item][$header + 1] = "" Then ExitLoop
+		.SetRequestHeader($aHeaders[$item][$header], $aHeaders[$item][$header + 1])
+		Next
+		.Send($lvEditText[$item][0])
+		;.Abort
+		.WaitForResponse($aListView[$item][14])
+		If GUICtrlRead($CBresp) = 1 Then
+		$HtmlSource = .Responsetext
+		If $HtmlSource <> "" Then GUICtrlSetData($Edit, $HtmlSource)
+		EndIf
+		;_ArrayDisplay($aListView)
+		;$timeinit = TimerInit()
+		;MsgBox(0, "Time Difference", $Pid)
+		Switch .Status
+		Case 200 To 299
+		$2xx += 1
+		Case 300 To 399
+		$3xx += 1
+		Case 400 To 499
+		$4xx += 1
+		Case 500 To 599
+		$5xx += 1
+		Case Else
+		$Dropped += 1
+		EndSwitch
+		$statMsg1 = StringFormat("2xx: %u 3xx: %u 4xx: %u 5xx: %u Dropped: %u Hits/sec: %.1f KB/sec: %.1f", $2xx & @TAB, $3xx & @TAB, $4xx & @TAB, $5xx & @TAB, $Dropped & @TAB, 1000 / TimerDiff($timeinit) & @TAB, BinaryLen(StringToBinary(.Responsetext)) / 1024)
+		_GUICtrlStatusBar_SetText($StatusBar1, $statMsg1, 0)
+		EndWith
+		Next
+		WEnd
+	#CE
 EndFunc   ;==>Button1Click
-
 
 Func GuiClose()
 	If GUICtrlRead($CBreg) = 1 Then RegDelete("HKCU\Software\soic")
+	For $i = 1 To UBound($Pid) - 1
+		ProcessClose($Pid[$i])
+	Next
 	$nItemCount = _GUICtrlListView_GetItemCount($__LISTVIEWCTRL)
 	If $nItemCount = 0 Then Exit
 	Local $aListView[$nItemCount][$nColumnCount]
@@ -382,9 +422,6 @@ Func GuiClose()
 		FileWrite($hFile, "[$*-ColumnSplit-*$]" & @CRLF)
 	Next
 	FileClose(@ScriptName & ".ini")
-	For $i = 1 To UBound($Pid) - 1
-		ProcessClose($Pid[$i])
-	Next
 	_TermEditLib()
 	Exit
 EndFunc   ;==>GuiClose
@@ -617,9 +654,6 @@ Func _MonitorEditState(ByRef $editCtrl, ByRef $editFlag, ByRef $__LISTVIEWCTRL, 
 		MouseClick("primary")
 	EndIf
 EndFunc   ;==>_MonitorEditState
-Func Enter()
-	; just a dummy function
-EndFunc   ;==>Enter
 ;===============================================================================
 ; Function Name:	_LVUpdate
 ; Description:		Put the new data in the Listview
